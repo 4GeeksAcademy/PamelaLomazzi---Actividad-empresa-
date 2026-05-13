@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>HealthCore | Atencion Medica Accesible y de Alta Calidad</title>
+		<meta
+			name="description"
+			content="HealthCore ofrece servicios de salud ambulatoria en Austin y red global de clinicas, con citas el mismo dia y personal bilingue."
+		/>
+		<meta name="robots" content="index, follow" />
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content="HealthCore" />
+		<meta
+			property="og:description"
+			content="Atencion medica ambulatoria confiable, moderna y humana desde 2011."
+		/>
+		<meta property="og:locale" content="es_ES" />
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "MedicalOrganization",
+				"name": "HealthCore",
+				"url": "./index.html",
+				"foundingDate": "2011",
+				"description": "Empresa de servicios de salud ambulatoria con sede en Austin, Texas, y operaciones en Estados Unidos y Reino Unido.",
+				"telephone": "+1-512-555-0142",
+				"email": "contact@healthcore.example",
+				"address": {
+					"@type": "PostalAddress",
+					"streetAddress": "2100 Medical Parkway",
+					"addressLocality": "Austin",
+					"addressRegion": "TX",
+					"postalCode": "78756",
+					"addressCountry": "US"
+				}
+			}
+		</script>
+	</head>
+	<body class="bg-slate-50 text-slate-800 antialiased">
+		<header class="sticky top-0 z-50 border-b border-teal-100 bg-white/95 backdrop-blur" role="banner">
+			<nav
+				class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8"
+				aria-label="Navegacion principal"
+				data-i18n-attr="aria-label:aria.navMain"
+			>
+				<a href="./index.html" class="inline-flex items-center" aria-label="HealthCore Inicio" data-i18n-attr="aria-label:aria.homeLink">
+					<img src="./imagenes/imagen1.png" alt="Logo HealthCore" data-i18n-attr="alt:aria.logoAlt" class="h-14 w-auto object-contain sm:h-16" />
+				</a>
+				<div class="hidden items-center gap-2 sm:gap-5 md:flex">
+					<ul class="items-center gap-5 text-sm font-medium text-slate-700 md:flex">
+						<li><a href="./index.html" class="transition hover:text-teal-600" data-i18n="nav.home">Inicio</a></li>
+						<li><a href="#servicios" class="transition hover:text-teal-600" data-i18n="nav.services">Servicios</a></li>
+						<li><a href="#nosotros" class="transition hover:text-teal-600" data-i18n="nav.about">Nosotros</a></li>
+						<li><a href="#contacto" class="transition hover:text-teal-600" data-i18n="nav.contact">Contacto</a></li>
+					</ul>
+					<a
+						href="./apply.html"
+						class="rounded-full bg-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+						data-i18n="nav.cta"
+						>Aplicar</a
+					>
+					<div class="ml-1 inline-flex items-center rounded-full border border-teal-200 bg-white p-1 text-xs font-semibold text-teal-700">
+						<button type="button" data-lang-switch="es" class="rounded-full px-2 py-1 transition hover:bg-teal-50">ES</button>
+						<button type="button" data-lang-switch="en" class="rounded-full px-2 py-1 transition hover:bg-teal-50">EN</button>
+					</div>
+				</div>
+				<button
+					id="mobileMenuButton"
+					type="button"
+					class="inline-flex items-center justify-center rounded-lg border border-teal-200 p-2 text-teal-700 md:hidden"
+					aria-label="Abrir menu"
+					data-i18n-attr="aria-label:aria.openMenu"
+					aria-controls="mobileMenu"
+					aria-expanded="false"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+					</svg>
+				</button>
+			</nav>
+			<div id="mobileMenu" class="mx-auto max-h-0 max-w-6xl overflow-hidden px-4 pb-0 opacity-0 transition-all duration-300 ease-out pointer-events-none sm:px-6 md:hidden" aria-hidden="true">
+				<div class="space-y-2 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
+					<a href="./index.html" class="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50" data-i18n="nav.home">Inicio</a>
+					<a href="#servicios" class="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50" data-i18n="nav.services">Servicios</a>
+					<a href="#nosotros" class="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50" data-i18n="nav.about">Nosotros</a>
+					<a href="#contacto" class="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50" data-i18n="nav.contact">Contacto</a>
+					<a href="./apply.html" class="mt-2 block rounded-full bg-teal-500 px-4 py-2 text-center text-sm font-semibold text-white" data-i18n="nav.cta">Aplicar</a>
+					<div class="mt-2 inline-flex items-center rounded-full border border-teal-200 bg-white p-1 text-xs font-semibold text-teal-700">
+						<button type="button" data-lang-switch="es" class="rounded-full px-2 py-1 transition hover:bg-teal-50">ES</button>
+						<button type="button" data-lang-switch="en" class="rounded-full px-2 py-1 transition hover:bg-teal-50">EN</button>
+					</div>
+				</div>
+			</div>
+		</header>
+
+		<main id="inicio" role="main">
+			<section class="relative isolate overflow-hidden" aria-labelledby="hero-title">
+				<img
+					src="https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1600&q=80"
+					alt="Profesionales de salud en un entorno clinico moderno"
+					class="absolute inset-0 -z-20 h-full w-full object-cover"
+				/>
+				<div class="absolute inset-0 -z-10 bg-gradient-to-r from-blue-950/85 via-blue-900/70 to-teal-700/65"></div>
+				<div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+					<p class="inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-teal-100" data-i18n="hero.badge">
+						HealthCore | Texas, Florida, Georgia y Reino Unido
+					</p>
+					<h1 id="hero-title" class="mt-6 max-w-3xl text-4xl font-black leading-tight text-white sm:text-5xl" data-i18n="hero.title">
+						Atencion Medica Accesible y de Alta Calidad
+					</h1>
+					<p class="mt-5 max-w-2xl text-base text-blue-50 sm:text-lg" data-i18n="hero.text">
+						Desde 2011 brindamos atencion ambulatoria con citas el mismo dia, procesos agiles y personal bilingue para una experiencia mas humana y eficiente.
+					</p>
+					<div class="mt-8 flex flex-wrap gap-3">
+						<a
+							href="#servicios"
+							class="rounded-full border border-blue-200/40 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+							data-i18n="hero.viewServices"
+							>Ver Servicios</a
+						>
+					</div>
+				</div>
+			</section>
+
+			<section id="servicios" class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8" aria-labelledby="servicios-title">
+				<h2 id="servicios-title" class="text-3xl font-bold text-blue-950" data-i18n="services.title">Servicios y Beneficios</h2>
+				<p class="mt-3 max-w-3xl text-slate-600" data-i18n="services.text">
+					Un enfoque ambulatorio integral para pacientes, familias y empresas que necesitan atencion confiable con estandares internacionales.
+				</p>
+				<div class="mt-8 grid items-start gap-5 md:grid-cols-3">
+					<details class="h-fit rounded-2xl border border-blue-100 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl" aria-label="Red Global">
+						<summary class="cursor-pointer list-none text-xl font-semibold text-blue-900 transition hover:text-teal-600" data-i18n="services.red.title">Red Global</summary>
+						<p class="mt-3 text-sm leading-relaxed text-slate-600" data-i18n="services.red.p1">
+							12 clinicas en TX, FL, GA y UK para coordinar continuidad de cuidado en varios mercados.
+						</p>
+						<p class="mt-3 text-sm leading-relaxed text-slate-600" data-i18n="services.red.p2">
+							Nuestra red comparte historiales clinicos seguros, protocolos estandarizados y equipos locales para garantizar la misma calidad en cada sede.
+						</p>
+						<ul class="mt-3 space-y-2 text-sm text-slate-600">
+							<li data-i18n="services.red.li1">Austin, Dallas, Miami, Orlando y Atlanta con cobertura ambulatoria extendida.</li>
+							<li data-i18n="services.red.li2">Coordinacion internacional para pacientes que viajan entre USA y UK.</li>
+						</ul>
+					</details>
+					<details class="h-fit rounded-2xl border border-blue-100 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl" aria-label="Accesibilidad">
+						<summary class="cursor-pointer list-none text-xl font-semibold text-blue-900 transition hover:text-teal-600" data-i18n="services.access.title">Accesibilidad</summary>
+						<p class="mt-3 text-sm leading-relaxed text-slate-600" data-i18n="services.access.p1">
+							Horarios extendidos, sin esperas innecesarias y procesos administrativos simplificados.
+						</p>
+						<p class="mt-3 text-sm leading-relaxed text-slate-600" data-i18n="services.access.p2">
+							Priorizamos acceso rapido con agendamiento digital y soporte humano para cada paciente, incluyendo personal bilingue y seguimiento postconsulta.
+						</p>
+						<ul class="mt-3 space-y-2 text-sm text-slate-600">
+							<li data-i18n="services.access.li1">Citas el mismo dia segun disponibilidad de sede.</li>
+							<li data-i18n="services.access.li2">Canales web y telefonicos para pacientes de distintas edades.</li>
+						</ul>
+					</details>
+					<details class="h-fit rounded-2xl border border-blue-100 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl" aria-label="Cuidado Especializado">
+						<summary class="cursor-pointer list-none text-xl font-semibold text-blue-900 transition hover:text-teal-600" data-i18n="services.special.title">Cuidado Especializado</summary>
+						<p class="mt-3 text-sm leading-relaxed text-slate-600" data-i18n="services.special.p1">
+							Atencion primaria, manejo de enfermedades cronicas y seguimiento preventivo centrado en resultados.
+						</p>
+						<p class="mt-3 text-sm leading-relaxed text-slate-600" data-i18n="services.special.p2">
+							Diseñamos planes de cuidado personalizados para diabetes, hipertension y salud cardiovascular, conectando especialistas cuando el caso lo requiere.
+						</p>
+						<ul class="mt-3 space-y-2 text-sm text-slate-600">
+							<li data-i18n="services.special.li1">Evaluaciones preventivas anuales y control de factores de riesgo.</li>
+							<li data-i18n="services.special.li2">Equipos multidisciplinarios para continuidad clinica.</li>
+						</ul>
+					</details>
+				</div>
+			</section>
+
+			<section class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8" aria-labelledby="videoconsultas-title">
+				<div class="overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm">
+					<div class="grid items-center gap-0 md:grid-cols-2">
+						<div class="h-full">
+							<img
+								src="./imagenes/imagen2.png"
+								alt="Servicio de videoconsultas de HealthCore"
+								data-i18n-attr="alt:aria.videoAlt"
+								class="h-full w-full object-cover"
+							/>
+						</div>
+						<div class="p-8 sm:p-10">
+							<p class="text-xs font-semibold uppercase tracking-wider text-teal-600" data-i18n="video.badge">Nuevo servicio digital</p>
+							<h2 id="videoconsultas-title" class="mt-3 text-3xl font-bold text-blue-950" data-i18n="video.title">ahora tambien contamos con videoconsultas</h2>
+							<p class="mt-3 text-slate-600" data-i18n="video.text">
+								Agenda consultas virtuales con profesionales de la red HealthCore para seguimiento, orientacion y control de patologias cronicas sin desplazarte.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8" aria-labelledby="galeria-title">
+				<div class="overflow-hidden rounded-3xl border border-teal-100 bg-white p-6 shadow-sm sm:p-8">
+					<div class="mb-6 flex items-center justify-between gap-4">
+						<div>
+							<p class="text-xs font-semibold uppercase tracking-wider text-teal-600" data-i18n="gallery.badge">Nuestras instalaciones</p>
+							<h2 id="galeria-title" class="mt-2 text-2xl font-bold text-blue-950 sm:text-3xl" data-i18n="gallery.title">Conoce HealthCore por dentro</h2>
+						</div>
+						<div class="hidden text-sm text-slate-500 sm:block" id="carouselCounter" aria-live="polite">1 / 3</div>
+					</div>
+
+					<div class="relative">
+						<img
+							id="carouselImage"
+							src="./imagenes/imagen3.png"
+							alt="Imagen destacada de HealthCore"
+							class="h-[300px] w-full rounded-2xl bg-slate-100 object-contain p-2 sm:h-[430px]"
+						/>
+
+						<button
+							id="carouselPrev"
+							type="button"
+							class="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-blue-900 shadow transition hover:bg-white"
+							aria-label="Imagen anterior"
+							data-i18n-attr="aria-label:gallery.prev"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+							</svg>
+						</button>
+
+						<button
+							id="carouselNext"
+							type="button"
+							class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-blue-900 shadow transition hover:bg-white"
+							aria-label="Imagen siguiente"
+							data-i18n-attr="aria-label:gallery.next"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+							</svg>
+						</button>
+					</div>
+					<p id="carouselTitle" class="mx-auto mt-5 max-w-4xl rounded-xl bg-teal-50 px-4 py-3 text-center text-xl font-black leading-tight tracking-tight text-blue-950 sm:text-2xl lg:text-3xl" aria-live="polite">
+						Contamos con una flota de más de 50 unidades móviles circulando las 24hs del día
+					</p>
+				</div>
+			</section>
+
+			<section id="nosotros" class="bg-blue-950 py-16" aria-labelledby="nosotros-title">
+				<div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+					<div class="grid gap-8 lg:grid-cols-2 lg:items-center">
+						<div>
+							<h2 id="nosotros-title" class="text-3xl font-bold text-white" data-i18n="about.title">Nuestra Historia</h2>
+							<p class="mt-4 text-blue-100" data-i18n="about.text">
+								HealthCore nacio en Austin en 2011 con la mision de elevar la calidad de la atencion ambulatoria. En mas de una decada, evolucionamos hacia una red internacional que combina excelencia clinica, eficiencia operativa y cercania humana.
+							</p>
+						</div>
+						<div class="rounded-2xl bg-blue-900/50 p-6 text-blue-50">
+							<p class="text-sm font-semibold uppercase tracking-wider text-teal-200" data-i18n="about.commitment">Compromiso HealthCore</p>
+							<p class="mt-3 text-lg font-medium" data-i18n="about.commitmentText">
+								Atender mejor, mas rapido y con empatía en cada consulta.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<section id="contacto" class="border-t border-blue-100 bg-white" aria-labelledby="contactanos-title">
+			<div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+				<div class="mb-8">
+					<h2 id="contactanos-title" class="text-3xl font-bold text-blue-950" data-i18n="contact.title">Contactanos</h2>
+					<p class="mt-2 max-w-3xl text-slate-600" data-i18n="contact.text">
+						Nuestro equipo de atencion ambulatoria esta disponible para ayudarte a agendar, resolver dudas de cobertura y orientarte segun tu motivo de consulta.
+					</p>
+				</div>
+				<div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+					<article class="rounded-2xl border border-teal-100 bg-slate-50 p-5">
+						<h3 class="text-lg font-semibold text-blue-900" data-i18n="contact.phoneTitle">Telefono y WhatsApp</h3>
+						<p class="mt-2 text-sm text-slate-600" data-i18n="contact.phoneDesc">Respuesta en minutos durante horario clinico.</p>
+						<p class="mt-3 text-sm font-semibold text-teal-700"><a href="tel:+15125550142">+1 (512) 555-0142</a></p>
+						<p class="mt-1 text-sm font-semibold text-teal-700"><a href="https://wa.me/15125550142">WhatsApp: +1 (512) 555-0142</a></p>
+					</article>
+					<article class="rounded-2xl border border-teal-100 bg-slate-50 p-5">
+						<h3 class="text-lg font-semibold text-blue-900" data-i18n="contact.emailTitle">Correo y Portal Paciente</h3>
+						<p class="mt-2 text-sm text-slate-600" data-i18n="contact.emailDesc">Consultas generales, documentos y seguimiento.</p>
+						<p class="mt-3 text-sm font-semibold text-teal-700"><a href="mailto:contact@healthcore.example">contact@healthcore.example</a></p>
+						<p class="mt-1 text-sm font-semibold text-teal-700"><a href="mailto:pacientes@healthcore.example">pacientes@healthcore.example</a></p>
+					</article>
+					<article class="rounded-2xl border border-teal-100 bg-slate-50 p-5">
+						<h3 class="text-lg font-semibold text-blue-900" data-i18n="contact.locationTitle">Sedes y Horarios</h3>
+						<p class="mt-2 text-sm text-slate-600" data-i18n="contact.locationAustin">Austin HQ: 2100 Medical Parkway, Austin, TX.</p>
+						<p class="mt-1 text-sm text-slate-600" data-i18n="contact.locationLondon">London Office: 18 Upper Wimpole Street, London, UK.</p>
+						<p class="mt-3 text-sm text-slate-700" data-i18n="contact.hoursInline">Lun-Sab: 7:00 a 21:00 | Dom: 8:00 a 15:00</p>
+					</article>
+				</div>
+			</div>
+		</section>
+
+		<footer class="border-t border-blue-100 bg-white" role="contentinfo">
+			<div class="mx-auto max-w-6xl px-4 py-6 text-sm text-slate-600 sm:px-6 lg:px-8" data-i18n="footer.text">
+				© 2026 HealthCore. Todos los derechos reservados. Si presentas una emergencia vital, llama al 911 o al servicio local de emergencias.
+			</div>
+		</footer>
+
+		<script src="./i18n.js?v=20260513-2"></script>
+
+		<script>
+			(function () {
+				const button = document.getElementById("mobileMenuButton");
+				const menu = document.getElementById("mobileMenu");
+				if (!button || !menu) return;
+
+				function closeMenu() {
+					menu.classList.remove("max-h-96", "opacity-100", "pb-4");
+					menu.classList.add("max-h-0", "opacity-0", "pb-0", "pointer-events-none");
+					menu.setAttribute("aria-hidden", "true");
+					button.setAttribute("aria-expanded", "false");
+				}
+
+				function openMenu() {
+					menu.classList.remove("max-h-0", "opacity-0", "pb-0", "pointer-events-none");
+					menu.classList.add("max-h-96", "opacity-100", "pb-4");
+					menu.setAttribute("aria-hidden", "false");
+					button.setAttribute("aria-expanded", "true");
+				}
+
+				button.addEventListener("click", function () {
+					const isClosed = menu.classList.contains("max-h-0");
+					if (isClosed) {
+						openMenu();
+					} else {
+						closeMenu();
+					}
+				});
+
+				menu.querySelectorAll("a").forEach(function (link) {
+					link.addEventListener("click", closeMenu);
+				});
+
+				document.addEventListener("keydown", function (event) {
+					if (event.key === "Escape") closeMenu();
+				});
+			})();
+
+			(function () {
+				const imageEl = document.getElementById("carouselImage");
+				const prevBtn = document.getElementById("carouselPrev");
+				const nextBtn = document.getElementById("carouselNext");
+				const counterEl = document.getElementById("carouselCounter");
+				const titleEl = document.getElementById("carouselTitle");
+				if (!imageEl || !prevBtn || !nextBtn) return;
+
+				function currentLang() {
+					const stored = localStorage.getItem("hcLang");
+					return stored === "en" ? "en" : "es";
+				}
+
+				function getSlides(lang) {
+					if (lang === "en") {
+						return [
+							{
+								src: "./imagenes/imagen3.png",
+								alt: "HealthCore ambulatory mobile units",
+								title: "We operate a fleet of over 50 mobile units 24/7"
+							},
+							{
+								src: "./imagenes/imagen4.png",
+								alt: "HealthCore lab analysis results",
+								title: "Lab results available within 24 hours"
+							},
+							{
+								src: "./imagenes/imagen5.png",
+								alt: "Specialized pediatric care at HealthCore",
+								title: "Specialized pediatric care"
+							}
+						];
+					}
+
+					return [
+						{
+							src: "./imagenes/imagen3.png",
+							alt: "Area de atencion ambulatoria de HealthCore",
+							title: "Contamos con una flota de mas de 50 unidades moviles circulando las 24hs del dia"
+						},
+						{
+							src: "./imagenes/imagen4.png",
+							alt: "Resultados de analisis de laboratorio de HealthCore",
+							title: "Resultados de analisis listos en 24hs"
+						},
+						{
+							src: "./imagenes/imagen5.png",
+							alt: "Atencion pediatrica en HealthCore",
+							title: "Atencion infantil especializada"
+						}
+					];
+				}
+
+				let currentIndex = 0;
+
+				function renderSlide() {
+					const slides = getSlides(currentLang());
+					const current = slides[currentIndex];
+					imageEl.src = current.src;
+					imageEl.alt = current.alt;
+					if (titleEl) titleEl.textContent = current.title;
+					if (counterEl) counterEl.textContent = String(currentIndex + 1) + " / " + String(slides.length);
+				}
+
+				prevBtn.addEventListener("click", function () {
+					const slides = getSlides(currentLang());
+					currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+					renderSlide();
+				});
+
+				nextBtn.addEventListener("click", function () {
+					const slides = getSlides(currentLang());
+					currentIndex = (currentIndex + 1) % slides.length;
+					renderSlide();
+				});
+
+				window.addEventListener("hc:langchange", function () {
+					renderSlide();
+				});
+
+				renderSlide();
+			})();
+		</script>
+	</body>
+</html>

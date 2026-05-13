@@ -1,3 +1,5 @@
+# Elección de empresa
+
 ## Empresa elegida
 HealthCore
 
@@ -19,6 +21,6 @@ Los procesos administrativos previos a la consulta son lentos e ineficientes.]
 [Automatizar la captación y gestión inicial de consultas de pacientes mediante un sitio web profesional bilingüe con formularios inteligentes y centralización de datos.]
 
 ## Mi idea de Agente de IA
-- Qué haría: [El agente de IA actuaría como un asistente virtual de admisión para pacientes. Su función principal sería recopilar automáticamente información básica de los pacientes desde el sitio web, responder preguntas frecuentes, clasificar consultas según el tipo de atención requerida y derivar cada caso al área correspondiente. Además, podría ayudar a coordinar solicitudes de citas,cancelaciones de las mismas y enviar recordatorios automáticos para reducir la tasa de no-shows.]
+- Qué haría: [El agente de IA actuaría como un asistente virtual de admisión para pacientes. Su función principal sería recopilar automáticamente información básica de los pacientes desde el sitio web, responder preguntas frecuentes, clasificar consultas según el tipo de atención requerida y derivar cada caso al área correspondiente. Además, podría ayudar a coordinar solicitudes de citas y enviar recordatorios automáticos para reducir la tasa de cancelaciones.]
 - Qué información necesitaría: [El agente necesitaría acceso a información sobre los servicios médicos de HealthCore, horarios y ubicaciones de las clínicas, disponibilidad de citas, idiomas disponibles, datos básicos del paciente, motivo de consulta y protocolos de derivación. También requeriría acceso a historiales de interacción, formularios completados y políticas de cumplimiento relacionadas con protección de datos bajo HIPAA y UK GDPR.]
-- Qué produciría o dispararía: [El agente generaría formularios estructurados con datos del paciente, tickets o solicitudes de seguimiento para recepción, alertas sobre consultas prioritarias y recordatorios automáticos de citas por correo o mensaje. Además, podría actualizar una base de datos centralizada con la información recopilada y generar reportes sobre volumen de consultas, tiempos de respuesta y posibles no-shows.]
+- Qué produciría o dispararía: [El agente generaría formularios estructurados con datos del paciente, tickets o solicitudes de seguimiento para recepción, alertas sobre consultas prioritarias y recordatorios automáticos de citas por correo o mensaje. Además, podría actualizar una base de datos centralizada con la información recopilada y generar reportes sobre volumen de consultas, tiempos de respuesta y posibles cancelaciones.]
