@@ -7,15 +7,69 @@ import {
   type RecordPayload,
   type RecordsResponse,
 } from "@/types/candidate";
+import type { IncidentMetricsResponse } from "@/types/incidents";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const INCIDENTS_API_URL = process.env.NEXT_PUBLIC_INCIDENTS_API_URL;
+const DEFAULT_API_URL = "http://localhost:8000";
 
-function getApiUrl(): string {
-  if (!API_URL) {
-    throw new Error("NEXT_PUBLIC_API_URL no esta configurada en .env.local");
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
+function isLoopbackUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
+function deriveRemoteDevApiUrl(): string | null {
+  if (typeof window === "undefined") {
+    return null;
   }
 
-  return API_URL.replace(/\/$/, "");
+  const { protocol, host, hostname } = window.location;
+  const isRemoteDevHost =
+    hostname.endsWith("app.github.dev") || hostname.endsWith("githubpreview.dev");
+
+  if (!isRemoteDevHost) {
+    return null;
+  }
+
+  const backendHost = host
+    .replace(/-3000\./, "-8000.")
+    .replace(/-3001\./, "-8000.");
+
+  return `${protocol}//${backendHost}`;
+}
+
+function resolveApiBaseUrl(configured?: string): string {
+  const dynamicRemoteUrl = deriveRemoteDevApiUrl();
+  if (configured) {
+    const normalized = normalizeBaseUrl(configured);
+    if (dynamicRemoteUrl && isLoopbackUrl(normalized)) {
+      return dynamicRemoteUrl;
+    }
+    return normalized;
+  }
+
+  return dynamicRemoteUrl ?? DEFAULT_API_URL;
+}
+
+function getApiUrl(): string {
+  return resolveApiBaseUrl(API_URL);
+}
+
+function getIncidentsApiBaseUrl(): string {
+  return resolveApiBaseUrl(INCIDENTS_API_URL ?? API_URL);
+}
+
+function getIncidentsRouteBase(): string {
+  const baseUrl = getIncidentsApiBaseUrl();
+  return baseUrl.endsWith("/api") ? `${baseUrl}/incidents` : `${baseUrl}/api/incidents`;
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -161,5 +215,40 @@ export async function deleteNote(id: string, noteId: string): Promise<void> {
     throw new Error(
       `No se pudo eliminar la nota ${noteId} del registro ${id}: ${message}`,
     );
+  }
+}
+
+export async function analyzeIncidents(file: File): Promise<IncidentMetricsResponse> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${getIncidentsRouteBase()}/analyze`, {
+      method: "POST",
+      body: formData,
+    });
+
+    return await parseResponse<IncidentMetricsResponse>(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    throw new Error(`No se pudo analizar el archivo de incidencias: ${message}`);
+  }
+}
+
+export async function downloadIncidentResultsCsv(): Promise<Blob> {
+  try {
+    const response = await fetch(`${getIncidentsRouteBase()}/results/export`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      await parseResponse(response);
+    }
+
+    return await response.blob();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    throw new Error(`No se pudo descargar el CSV de resultados: ${message}`);
   }
 }
