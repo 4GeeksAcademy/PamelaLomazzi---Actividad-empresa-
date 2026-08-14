@@ -2,12 +2,12 @@
  * Filtra una colección usando un conjunto de criterios estrictos.
  * Se compara igualdad estricta para cada par clave-valor.
  */
-export function filtrarColeccion<T>(array: T[], criterios: Partial<Record<keyof T, any>>): T[] {
+export function filtrarColeccion<T>(array: T[], criterios: Partial<Record<keyof T, unknown>>): T[] {
   if (!Array.isArray(array) || array.length === 0) {
     return [];
   }
 
-  const criteriosEntries = Object.entries(criterios) as [keyof T, any][];
+  const criteriosEntries = Object.entries(criterios) as Array<[keyof T, unknown]>;
 
   return array.filter((item) =>
     criteriosEntries.every(([clave, valor]) => {
