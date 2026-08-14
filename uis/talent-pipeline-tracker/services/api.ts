@@ -17,6 +17,15 @@ function normalizeBaseUrl(url: string): string {
   return url.replace(/\/$/, "");
 }
 
+function isValidHttpBaseUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function isLoopbackUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -39,9 +48,12 @@ function deriveRemoteDevApiUrl(): string | null {
     return null;
   }
 
-  const backendHost = host
-    .replace(/-3000\./, "-8000.")
-    .replace(/-3001\./, "-8000.");
+  const match = host.match(/^(.*)-\d+\.(app\.github\.dev|githubpreview\.dev)$/);
+  if (!match) {
+    return null;
+  }
+
+  const backendHost = `${match[1]}-8000.${match[2]}`;
 
   return `${protocol}//${backendHost}`;
 }
@@ -50,9 +62,14 @@ function resolveApiBaseUrl(configured?: string): string {
   const dynamicRemoteUrl = deriveRemoteDevApiUrl();
   if (configured) {
     const normalized = normalizeBaseUrl(configured);
+    if (!isValidHttpBaseUrl(normalized)) {
+      return dynamicRemoteUrl ?? DEFAULT_API_URL;
+    }
+
     if (dynamicRemoteUrl && isLoopbackUrl(normalized)) {
       return dynamicRemoteUrl;
     }
+
     return normalized;
   }
 
