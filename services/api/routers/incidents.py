@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 
+from services.api.dependencies.auth import get_current_user
+from services.api.models.auth import User, UserRole
 from services.api.schemas.incidents import ErrorResponse, IncidentMetricsResponse
 from services.api.services.incidents_analysis_service import (
     IncidentAnalysisResult,
@@ -12,7 +14,7 @@ from services.api.services.incidents_analysis_service import (
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 analysis_service = IncidentAnalysisService()
-_last_result: IncidentAnalysisResult | None = None
+_last_results_by_user: dict[str, IncidentAnalysisResult] = {}
 
 
 @router.post(
@@ -20,8 +22,10 @@ _last_result: IncidentAnalysisResult | None = None
     response_model=IncidentMetricsResponse,
     responses={400: {"model": ErrorResponse}},
 )
-async def analyze_incidents(file: UploadFile = File(...)) -> IncidentMetricsResponse:
-    global _last_result
+async def analyze_incidents(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+) -> IncidentMetricsResponse:
 
     if not file.filename:
         raise HTTPException(
@@ -60,7 +64,7 @@ async def analyze_incidents(file: UploadFile = File(...)) -> IncidentMetricsResp
             detail=str(exc),
         ) from exc
 
-    _last_result = result
+    _last_results_by_user[current_user.id] = result
     return IncidentMetricsResponse(
         total_processed=result.total_processed,
         total_valid=result.total_valid,
@@ -77,14 +81,25 @@ async def analyze_incidents(file: UploadFile = File(...)) -> IncidentMetricsResp
     "/results/export",
     responses={400: {"model": ErrorResponse}},
 )
-def export_last_results() -> StreamingResponse:
-    if _last_result is None:
+def export_last_results(
+    current_user: User = Depends(get_current_user),
+    user_id: str | None = None,
+) -> StreamingResponse:
+    target_user_id = user_id or current_user.id
+    if target_user_id != current_user.id and current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+        )
+
+    result = _last_results_by_user.get(target_user_id)
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No hay resultados para exportar. Ejecuta primero /api/incidents/analyze.",
         )
 
-    rows = analysis_service.build_export_rows(_last_result)
+    rows = analysis_service.build_export_rows(result)
     csv_content = analysis_service.export_rows_to_csv_text(rows)
 
     return StreamingResponse(
