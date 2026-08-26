@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from services.api.api_v1 import api_router
+from services.api.dependencies.auth import get_current_user
+from services.api.models.auth import User
+from services.api.routers.auth import router as auth_router
+from services.api.routers.profiles import router as profiles_router
+from services.api.routers.users import router as users_router
 
 
 def _get_cors_origins() -> list[str]:
@@ -43,8 +48,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router)
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(profiles_router)
 
 
 @app.get("/health", tags=["health"])
-def health_check() -> dict[str, str]:
+def health_check(current_user: User = Depends(get_current_user)) -> dict[str, str]:
+    del current_user
     return {"status": "ok"}
