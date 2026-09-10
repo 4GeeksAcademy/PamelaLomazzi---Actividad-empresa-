@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from services.api.api_v1 import api_router
+from services.api.routes.suppliers import router as suppliers_router
 
 
 def _get_cors_origins() -> list[str]:
@@ -43,6 +44,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router)
+# El router ya define su propio prefix ("/suppliers"), no se repite aquí.
+app.include_router(suppliers_router, tags=["Suppliers"])
 
 
 @app.get("/health", tags=["health"])
