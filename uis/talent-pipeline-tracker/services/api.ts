@@ -8,6 +8,7 @@ import {
   type RecordsResponse,
 } from "@/types/candidate";
 import type { IncidentMetricsResponse } from "@/types/incidents";
+import type { Supplier, SupplierFilters, SupplierPayload, SupplierStatus } from "@/types/supplier";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const INCIDENTS_API_URL = process.env.NEXT_PUBLIC_INCIDENTS_API_URL;
@@ -89,12 +90,30 @@ function getIncidentsRouteBase(): string {
   return baseUrl.endsWith("/api") ? `${baseUrl}/incidents` : `${baseUrl}/api/incidents`;
 }
 
+function getSuppliersRouteBase(): string {
+  const baseUrl = getIncidentsApiBaseUrl();
+  return baseUrl.endsWith("/api") ? `${baseUrl.slice(0, -"/api".length)}/suppliers` : `${baseUrl}/suppliers`;
+}
+
+function formatValidationDetail(detail: unknown): string | null {
+  if (!Array.isArray(detail)) {
+    return null;
+  }
+
+  const messages = detail
+    .map((item) => (item && typeof item === "object" && "msg" in item ? String(item.msg) : null))
+    .filter((msg): msg is string => Boolean(msg));
+
+  return messages.length > 0 ? messages.join(" ") : null;
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const payload = isJson ? await response.json() : null;
 
   if (!response.ok) {
     const message =
+      (payload && typeof payload === "object" && "detail" in payload && formatValidationDetail(payload.detail)) ||
       (payload && typeof payload === "object" && "detail" in payload && String(payload.detail)) ||
       (payload && typeof payload === "object" && "message" in payload && String(payload.message)) ||
       `HTTP ${response.status}`;
@@ -267,5 +286,75 @@ export async function downloadIncidentResultsCsv(): Promise<Blob> {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error desconocido";
     throw new Error(`No se pudo descargar el CSV de resultados: ${message}`);
+  }
+}
+
+export async function getSuppliers(filters?: SupplierFilters): Promise<Supplier[]> {
+  try {
+    const params = new URLSearchParams();
+    if (filters?.country) params.set("country", filters.country);
+    if (filters?.category) params.set("category", filters.category);
+    const query = params.toString();
+
+    const response = await fetch(`${getSuppliersRouteBase()}${query ? `?${query}` : ""}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    return await parseResponse<Supplier[]>(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    throw new Error(`No se pudieron obtener los proveedores: ${message}`);
+  }
+}
+
+export async function createSupplier(data: SupplierPayload): Promise<Supplier> {
+  try {
+    const response = await fetch(getSuppliersRouteBase(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    return await parseResponse<Supplier>(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    throw new Error(`No se pudo crear el proveedor: ${message}`);
+  }
+}
+
+export async function updateSupplierRate(id: number, monthlyRate: number): Promise<Supplier> {
+  try {
+    const response = await fetch(`${getSuppliersRouteBase()}/${id}/rate`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ monthly_rate: monthlyRate }),
+    });
+
+    return await parseResponse<Supplier>(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    throw new Error(`No se pudo actualizar la tarifa del proveedor ${id}: ${message}`);
+  }
+}
+
+export async function updateSupplierStatus(id: number, status: SupplierStatus): Promise<Supplier> {
+  try {
+    const response = await fetch(`${getSuppliersRouteBase()}/${id}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    return await parseResponse<Supplier>(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    throw new Error(`No se pudo actualizar el estado del proveedor ${id}: ${message}`);
   }
 }
