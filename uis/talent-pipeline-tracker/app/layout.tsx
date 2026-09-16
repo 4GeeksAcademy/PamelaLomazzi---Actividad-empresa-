@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
+import AuthGuard from "@/components/AuthGuard";
+import AuthNavActions from "@/components/AuthNavActions";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -47,9 +50,10 @@ export default function RootLayout({
             >
               Analisis de Incidencias
             </Link>
+            <AuthNavActions />
           </div>
         </nav>
-        {children}
+        <AuthGuard>{children}</AuthGuard>
       </body>
     </html>
   );

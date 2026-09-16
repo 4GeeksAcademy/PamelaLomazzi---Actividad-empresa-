@@ -76,7 +76,7 @@ function resolveApiBaseUrl(configured?: string): string {
   return dynamicRemoteUrl ?? DEFAULT_API_URL;
 }
 
-function getApiUrl(): string {
+export function getApiUrl(): string {
   return resolveApiBaseUrl(API_URL);
 }
 
@@ -89,7 +89,19 @@ function getIncidentsRouteBase(): string {
   return baseUrl.endsWith("/api") ? `${baseUrl}/incidents` : `${baseUrl}/api/incidents`;
 }
 
-async function parseResponse<T>(response: Response): Promise<T> {
+export class ApiError extends Error {
+  status: number;
+  payload: unknown;
+
+  constructor(message: string, status: number, payload: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+export async function parseResponse<T>(response: Response): Promise<T> {
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const payload = isJson ? await response.json() : null;
 
@@ -99,7 +111,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
       (payload && typeof payload === "object" && "message" in payload && String(payload.message)) ||
       `HTTP ${response.status}`;
 
-    throw new Error(message);
+    throw new ApiError(message, response.status, payload);
   }
 
   return payload as T;
