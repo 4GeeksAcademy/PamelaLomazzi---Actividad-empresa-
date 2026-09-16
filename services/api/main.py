@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
-from services.api.api_v1 import api_router
+# Carga variables de entorno (ej. RESEND_API_KEY) desde un .env en la raíz del repo.
+load_dotenv()
+
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+
+from services.api.api_v1 import api_router  # noqa: E402
+from services.api.routers.records import router as records_router  # noqa: E402
 
 
 def _get_cors_origins() -> list[str]:
@@ -43,6 +49,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router)
+# El frontend consume /records sin prefijo /api (cliente HTTP del pipeline de talento).
+app.include_router(records_router)
 
 
 @app.get("/health", tags=["health"])
