@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 import LogoutButton from "@/components/LogoutButton";
 
-const PUBLIC_PATHS = ["/login", "/register"];
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

@@ -3,10 +3,14 @@ import { authorizedFetch, setToken } from "@/services/authClient";
 import type {
   AuthTokenResponse,
   AuthenticatedUser,
+  ChangePasswordPayload,
+  ForgotPasswordPayload,
   LoginPayload,
+  MessageResponse,
   Profile,
   ProfileUpdatePayload,
   RegisterPayload,
+  ResetPasswordPayload,
 } from "@/types/auth";
 
 // Los routers de auth/usuarios/perfiles del backend FastAPI se montan bajo /api.
@@ -72,4 +76,34 @@ export async function updateMyProfile(payload: ProfileUpdatePayload): Promise<Pr
     const message = error instanceof Error ? error.message : "Error desconocido";
     throw new Error(`No se pudo actualizar el perfil: ${message}`);
   }
+}
+
+export async function forgotPassword(payload: ForgotPasswordPayload): Promise<MessageResponse> {
+  const response = await fetch(`${getAuthApiBase()}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  return parseResponse<MessageResponse>(response);
+}
+
+export async function resetPassword(payload: ResetPasswordPayload): Promise<MessageResponse> {
+  const response = await fetch(`${getAuthApiBase()}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  return parseResponse<MessageResponse>(response);
+}
+
+export async function changePassword(payload: ChangePasswordPayload): Promise<MessageResponse> {
+  const response = await authorizedFetch(`${getAuthApiBase()}/auth/change-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  return parseResponse<MessageResponse>(response);
 }

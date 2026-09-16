@@ -39,3 +39,22 @@ class ProfileUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+class MessageResponse(BaseModel):
+    message: str
+

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
 
 import bcrypt
 from jose import JWTError, jwt
@@ -13,6 +13,8 @@ from services.api.schemas.auth import ProfileData
 SECRET_KEY = os.getenv("AUTH_SECRET_KEY", "dev-only-insecure-secret-change-me")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("AUTH_TOKEN_EXPIRE_MINUTES", "1440"))
+PASSWORD_RESET_TOKEN_TYPE = "password_reset"
+PASSWORD_RESET_EXPIRE_MINUTES = int(os.getenv("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES", "30"))
 
 
 class AuthError(Exception):
@@ -46,6 +48,10 @@ class AuthService:
 
     def __init__(self) -> None:
         self._users_by_email: Dict[str, StoredUser] = {}
+        self._users_by_id: Dict[str, StoredUser] = {}
+        # jti del último token de reseteo emitido por usuario; uno nuevo invalida el anterior.
+        self._active_reset_jti_by_user: Dict[str, str] = {}
+        self._used_reset_jti: Set[str] = set()
 
     def register(
         self,
@@ -66,6 +72,7 @@ class AuthService:
             profile=ProfileData(name=name, phone=phone, address=address),
         )
         self._users_by_email[normalized_email] = user
+        self._users_by_id[user.id] = user
         return user
 
     def authenticate(self, email: str, password: str) -> StoredUser:
@@ -73,6 +80,9 @@ class AuthService:
         if user is None or not _verify_password(password, user.hashed_password):
             raise AuthError("Email o contraseña incorrectos.")
         return user
+
+    def find_user_by_email(self, email: str) -> Optional[StoredUser]:
+        return self._users_by_email.get(email.strip().lower())
 
     def create_access_token(self, user: StoredUser) -> str:
         expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -85,12 +95,51 @@ class AuthService:
         except JWTError as exc:
             raise InvalidTokenError("Token inválido o expirado.") from exc
 
-        user_id = payload.get("sub")
-        for user in self._users_by_email.values():
-            if user.id == user_id:
-                return user
+        user = self._users_by_id.get(payload.get("sub", ""))
+        if user is None:
+            raise InvalidTokenError("Usuario no encontrado.")
 
-        raise InvalidTokenError("Usuario no encontrado.")
+        return user
+
+    def create_password_reset_token(self, user: StoredUser) -> str:
+        jti = str(uuid.uuid4())
+        expire = datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_EXPIRE_MINUTES)
+        payload = {
+            "sub": user.id,
+            "type": PASSWORD_RESET_TOKEN_TYPE,
+            "jti": jti,
+            "exp": expire,
+        }
+        # Un token nuevo invalida cualquier token de reseteo emitido previamente.
+        self._active_reset_jti_by_user[user.id] = jti
+        return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+    def reset_password(self, token: str, new_password: str) -> None:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except JWTError as exc:
+            raise InvalidTokenError("El enlace de restablecimiento es inválido o expiró.") from exc
+
+        if payload.get("type") != PASSWORD_RESET_TOKEN_TYPE:
+            raise InvalidTokenError("El enlace de restablecimiento es inválido.")
+
+        jti = payload.get("jti")
+        user = self._users_by_id.get(payload.get("sub", ""))
+        if user is None or not jti:
+            raise InvalidTokenError("El enlace de restablecimiento es inválido.")
+
+        if jti in self._used_reset_jti or self._active_reset_jti_by_user.get(user.id) != jti:
+            raise InvalidTokenError("El enlace de restablecimiento ya fue utilizado o expiró.")
+
+        user.hashed_password = _hash_password(new_password)
+        self._used_reset_jti.add(jti)
+        self._active_reset_jti_by_user.pop(user.id, None)
+
+    def change_password(self, user: StoredUser, current_password: str, new_password: str) -> None:
+        if not _verify_password(current_password, user.hashed_password):
+            raise AuthError("La contraseña actual no coincide.")
+
+        user.hashed_password = _hash_password(new_password)
 
     def update_profile(self, user: StoredUser, update: ProfileData) -> ProfileData:
         current = user.profile

@@ -33,3 +33,22 @@ export interface ProfileUpdatePayload {
   phone?: string;
   address?: string;
 }
+
+export interface MessageResponse {
+  message: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  new_password: string;
+}
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+

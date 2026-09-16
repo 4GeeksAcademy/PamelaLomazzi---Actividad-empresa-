@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { getMe, updateMyProfile } from "@/services/auth";
@@ -73,6 +74,12 @@ export default function AccountProfilePage() {
     <main className="mx-auto w-full max-w-lg flex-1 px-6 py-12">
       <h1 className="text-2xl font-semibold text-slate-900">Mi cuenta</h1>
       {user ? <p className="mt-1 text-sm text-slate-600">{user.email}</p> : null}
+      <Link
+        href="/account/change-password"
+        className="mt-2 inline-block text-sm font-medium text-cyan-700 hover:underline"
+      >
+        Cambiar contraseña
+      </Link>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
