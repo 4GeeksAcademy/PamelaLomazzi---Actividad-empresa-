@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from services.api.api_v1 import api_router
+from services.api.routers.records import router as records_router
 
 
 def _get_cors_origins() -> list[str]:
@@ -43,6 +44,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router)
+# El frontend consume /records sin prefijo /api (cliente HTTP del pipeline de talento).
+app.include_router(records_router)
 
 
 @app.get("/health", tags=["health"])
