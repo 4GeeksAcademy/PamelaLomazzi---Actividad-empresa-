@@ -74,7 +74,10 @@ def update_incident_status(
     except IncidentNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Incidencia no encontrada.") from exc
     except InvalidIncidentTransitionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400,
+            detail="Transición de estado no permitida para esta incidencia.",
+        ) from exc
 
 
 @router.post(
@@ -99,7 +102,14 @@ async def analyze_incidents(file: UploadFile = File(...)) -> IncidentMetricsResp
             detail="El archivo debe ser un CSV válido.",
         )
 
-    raw_bytes = await file.read()
+    try:
+        raw_bytes = await file.read()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error al leer el archivo cargado.",
+        ) from exc
+
     if not raw_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -146,8 +156,14 @@ def export_last_results() -> StreamingResponse:
             detail="No hay resultados para exportar. Ejecuta primero /api/incidents/analyze.",
         )
 
-    rows = analysis_service.build_export_rows(_last_result)
-    csv_content = analysis_service.export_rows_to_csv_text(rows)
+    try:
+        rows = analysis_service.build_export_rows(_last_result)
+        csv_content = analysis_service.export_rows_to_csv_text(rows)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo generar la exportación de los resultados.",
+        ) from exc
 
     return StreamingResponse(
         iter([csv_content]),

@@ -48,6 +48,9 @@ export default function IncidentsPage() {
   const [summary, setSummary] = useState<IncidentSummary | null>(null);
   const [filters, setFilters] = useState<IncidentFilters>({});
   const [selected, setSelected] = useState<Incident | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -57,8 +60,8 @@ export default function IncidentsPage() {
     try {
       const [items, metrics] = await Promise.all([getIncidents(filters), getIncidentSummary()]);
       setIncidents(items); setSummary(metrics);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron cargar las incidencias.");
+    } catch {
+      setError("No se pudieron cargar las incidencias. Comprueba la conexión e inténtalo de nuevo.");
     } finally { setLoading(false); }
   }, [filters]);
 
@@ -73,13 +76,22 @@ export default function IncidentsPage() {
       setIncidents((current) => current.map((item) => item.id === id ? updated : item));
       setSelected((current) => current?.id === id ? updated : current);
       const metrics = await getIncidentSummary(); setSummary(metrics);
-    } catch (err) { setError(err instanceof Error ? err.message : "No se pudo actualizar el estado."); }
+    } catch { setError("No se pudo actualizar el estado de la incidencia. Inténtalo de nuevo."); }
     finally { setUpdating(null); }
   }
 
   async function showDetail(id: string) {
-    try { setSelected(await getIncidentById(id)); }
-    catch (err) { setError(err instanceof Error ? err.message : "No se pudo cargar el detalle."); }
+    setSelectedId(id);
+    setSelected(null);
+    setDetailError(null);
+    setDetailLoading(true);
+    try {
+      setSelected(await getIncidentById(id));
+    } catch {
+      setDetailError("No se pudo cargar el detalle de la incidencia. Inténtalo de nuevo.");
+    } finally {
+      setDetailLoading(false);
+    }
   }
 
   function setFilter(key: keyof IncidentFilters, value: string) {
@@ -94,7 +106,7 @@ export default function IncidentsPage() {
           <Link href="/incidents/new" className="rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-800">+ Nueva incidencia</Link>
         </header>
 
-        {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+        {error && <div role="alert" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><span>{error}</span><button type="button" onClick={() => void load()} className="rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold text-red-800 hover:bg-red-100">Reintentar</button></div>}
 
         {summary && <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 shadow-sm"><p className="text-xs font-semibold uppercase tracking-wider text-cyan-700">Total</p><p className="mt-2 text-3xl font-bold text-cyan-900">{summary.total}</p></div><CounterGroup title="Por estado" values={summary.by_status} /><CounterGroup title="Por categoría" values={summary.by_category} /><CounterGroup title="Por origen" values={summary.by_origin} /></section>}
         {summary && <section className="mt-4"><CounterGroup title="Por sede" values={summary.by_branch} /></section>}
@@ -114,7 +126,7 @@ export default function IncidentsPage() {
         </section>
       </div>
 
-      {selected && <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/40 p-6" onClick={() => setSelected(null)}><section role="dialog" aria-modal="true" className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}><div className="flex justify-between gap-4"><h2 className="text-xl font-bold">{selected.title}</h2><button onClick={() => setSelected(null)} aria-label="Cerrar detalle" className="text-2xl text-slate-400">×</button></div><dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2"><div><dt className="font-semibold text-slate-500">Estado</dt><dd>{labels[selected.status] ?? selected.status}</dd></div><div><dt className="font-semibold text-slate-500">Categoría</dt><dd>{selected.category}</dd></div><div><dt className="font-semibold text-slate-500">Origen</dt><dd>{selected.origin}</dd></div><div><dt className="font-semibold text-slate-500">Sede</dt><dd>{selected.branch}</dd></div><div className="sm:col-span-2"><dt className="font-semibold text-slate-500">Descripción</dt><dd className="mt-1 whitespace-pre-wrap">{selected.description}</dd></div><div><dt className="font-semibold text-slate-500">Creada</dt><dd>{new Date(selected.created_at).toLocaleString("es-ES")}</dd></div><div><dt className="font-semibold text-slate-500">Actualizada</dt><dd>{new Date(selected.updated_at).toLocaleString("es-ES")}</dd></div></dl></section></div>}
+      {(detailLoading || detailError || selected) && <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/40 p-6" onClick={() => { setSelected(null); setSelectedId(null); setDetailError(null); }}><section role="dialog" aria-modal="true" className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}><div className="flex justify-between gap-4"><h2 className="text-xl font-bold">Detalle de incidencia</h2><button onClick={() => { setSelected(null); setSelectedId(null); setDetailError(null); }} aria-label="Cerrar detalle" className="text-2xl text-slate-400">×</button></div>{detailLoading && <p className="mt-5 text-sm text-slate-500">Cargando detalle…</p>}{detailError && <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{detailError}</p><div className="mt-4 flex gap-2"><button type="button" onClick={() => selectedId && void showDetail(selectedId)} className="rounded-lg bg-cyan-700 px-3 py-2 font-semibold text-white hover:bg-cyan-800">Reintentar carga</button><button type="button" onClick={() => { setSelected(null); setSelectedId(null); setDetailError(null); }} className="rounded-lg border border-slate-300 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50">Cerrar</button></div></div>}{selected && !detailLoading && !detailError && <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2"><div><dt className="font-semibold text-slate-500">Estado</dt><dd>{labels[selected.status] ?? selected.status}</dd></div><div><dt className="font-semibold text-slate-500">Categoría</dt><dd>{selected.category}</dd></div><div><dt className="font-semibold text-slate-500">Origen</dt><dd>{selected.origin}</dd></div><div><dt className="font-semibold text-slate-500">Sede</dt><dd>{selected.branch}</dd></div><div className="sm:col-span-2"><dt className="font-semibold text-slate-500">Descripción</dt><dd className="mt-1 whitespace-pre-wrap">{selected.description}</dd></div><div><dt className="font-semibold text-slate-500">Creada</dt><dd>{new Date(selected.created_at).toLocaleString("es-ES")}</dd></div><div><dt className="font-semibold text-slate-500">Actualizada</dt><dd>{new Date(selected.updated_at).toLocaleString("es-ES")}</dd></div></dl>}</section></div>}
     </main>
   );
 }

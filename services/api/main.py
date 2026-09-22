@@ -53,12 +53,22 @@ def create_database_tables() -> None:
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
+    details = [
+        {
+            "field": " -> ".join(
+                str(location) for location in error.get("loc", ()) if location != "body"
+            ),
+            "message": error.get("msg", "Los datos enviados no son válidos."),
+        }
+        for error in exc.errors()
+    ]
+
     return JSONResponse(
         status_code=400,
         content={
             "error": "validation_error",
             "message": "Los datos enviados no son válidos.",
-            "details": exc.errors(),
+            "details": details,
         },
     )
 
