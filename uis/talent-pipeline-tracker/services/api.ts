@@ -8,6 +8,7 @@ import {
   type RecordsResponse,
 } from "@/types/candidate";
 import type { IncidentMetricsResponse } from "@/types/incidents";
+import type { Incident, IncidentCreatePayload, IncidentStatus, IncidentSummary } from "@/types/incident";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const INCIDENTS_API_URL = process.env.NEXT_PUBLIC_INCIDENTS_API_URL;
@@ -94,6 +95,14 @@ async function parseResponse<T>(response: Response): Promise<T> {
   const payload = isJson ? await response.json() : null;
 
   if (!response.ok) {
+    if (
+      payload &&
+      typeof payload === "object" &&
+      "error" in payload &&
+      payload.error === "validation_error"
+    ) {
+      throw new Error(JSON.stringify(payload));
+    }
     const message =
       (payload && typeof payload === "object" && "detail" in payload && String(payload.detail)) ||
       (payload && typeof payload === "object" && "message" in payload && String(payload.message)) ||
@@ -250,6 +259,47 @@ export async function analyzeIncidents(file: File): Promise<IncidentMetricsRespo
     const message = error instanceof Error ? error.message : "Error desconocido";
     throw new Error(`No se pudo analizar el archivo de incidencias: ${message}`);
   }
+}
+
+export async function createIncident(payload: IncidentCreatePayload): Promise<Incident> {
+  try {
+    const response = await fetch(getIncidentsRouteBase(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await parseResponse<Incident>(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    throw new Error(`No se pudo registrar la incidencia: ${message}`);
+  }
+}
+
+export type IncidentFilters = Partial<Pick<Incident, "status" | "origin" | "branch" | "category">>;
+
+export async function getIncidents(filters: IncidentFilters = {}): Promise<Incident[]> {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  return parseResponse<Incident[]>(await fetch(`${getIncidentsRouteBase()}${query ? `?${query}` : ""}`, { cache: "no-store" }));
+}
+
+export async function getIncidentById(id: string): Promise<Incident> {
+  return parseResponse<Incident>(await fetch(`${getIncidentsRouteBase()}/${id}`, { cache: "no-store" }));
+}
+
+export async function getIncidentSummary(): Promise<IncidentSummary> {
+  return parseResponse<IncidentSummary>(await fetch(`${getIncidentsRouteBase()}/summary`, { cache: "no-store" }));
+}
+
+export async function updateIncidentStatus(id: string, status: IncidentStatus): Promise<Incident> {
+  return parseResponse<Incident>(await fetch(`${getIncidentsRouteBase()}/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  }));
 }
 
 export async function downloadIncidentResultsCsv(): Promise<Blob> {
