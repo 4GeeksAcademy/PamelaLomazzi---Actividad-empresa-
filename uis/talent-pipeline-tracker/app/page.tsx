@@ -3,10 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { getRecords } from "@/services/api";
-import type { CandidateStage, CandidateStatus, Record } from "@/types/candidate";
+import type { CandidateStage, CandidateStatus, Record as CandidateRecord } from "@/types/candidate";
 
 const STATUS_OPTIONS: Array<{ value: CandidateStatus; label: string }> = [
   { value: "received", label: "Recibida" },
@@ -23,14 +23,14 @@ const STAGE_OPTIONS: Array<{ value: CandidateStage; label: string }> = [
   { value: "offer_presented", label: "Oferta presentada" },
 ];
 
-const STATUS_STYLE: Record<CandidateStatus, string> = {
+const STATUS_STYLE: globalThis.Record<CandidateStatus, string> = {
   received: "border-sky-200 bg-sky-50 text-sky-700",
   in_progress: "border-amber-200 bg-amber-50 text-amber-700",
   selected: "border-emerald-200 bg-emerald-50 text-emerald-700",
   discarded: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
-const STAGE_STYLE: Record<CandidateStage, string> = {
+const STAGE_STYLE: globalThis.Record<CandidateStage, string> = {
   pending: "border-slate-200 bg-slate-100 text-slate-700",
   review: "border-cyan-200 bg-cyan-50 text-cyan-700",
   personal_interview: "border-violet-200 bg-violet-50 text-violet-700",
@@ -46,12 +46,12 @@ function getStageLabel(stage: CandidateStage): string {
   return STAGE_OPTIONS.find((option) => option.value === stage)?.label ?? stage;
 }
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [records, setRecords] = useState<Record[]>([]);
+  const [records, setRecords] = useState<CandidateRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -278,5 +278,13 @@ export default function Home() {
         ) : null}
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-slate-100" />}>
+      <HomeContent />
+    </Suspense>
   );
 }

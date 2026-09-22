@@ -6,6 +6,8 @@
 // Example placeholder — replace with your domain types
 export type Id = string;
 
+export * from "../constants";
+
 export interface BaseEntity {
   id: Id;
   createdAt?: string;

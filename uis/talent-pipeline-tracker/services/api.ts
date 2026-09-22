@@ -8,6 +8,7 @@ import {
   type RecordsResponse,
 } from "@/types/candidate";
 import type { IncidentMetricsResponse } from "@/types/incidents";
+import type { Incident, IncidentCreatePayload, IncidentStatus, IncidentSummary } from "@/types/incident";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const INCIDENTS_API_URL = process.env.NEXT_PUBLIC_INCIDENTS_API_URL;
@@ -89,47 +90,86 @@ function getIncidentsRouteBase(): string {
   return baseUrl.endsWith("/api") ? `${baseUrl}/incidents` : `${baseUrl}/api/incidents`;
 }
 
+const HTTP_ERROR_MESSAGES: { [status: number]: string } = {
+  400: "Los datos enviados no son válidos.",
+  401: "No tienes autorización para realizar esta operación.",
+  403: "No tienes permisos para realizar esta operación.",
+  404: "Recurso no encontrado.",
+  409: "La operación no se puede completar porque existe un conflicto.",
+  413: "El archivo enviado es demasiado grande.",
+  429: "Demasiadas solicitudes. Inténtalo de nuevo más tarde.",
+  500: "Ocurrió un error en el servidor. Por favor, reintenta más tarde.",
+};
+
+const INVALID_RESPONSE_MESSAGE =
+  "Error de comunicación con el servidor (respuesta no válida).";
+
+function getHttpErrorMessage(status: number): string {
+  if (HTTP_ERROR_MESSAGES[status]) {
+    return HTTP_ERROR_MESSAGES[status];
+  }
+
+  if (status >= 500) {
+    return "Ocurrió un error en el servidor. Por favor, reintenta más tarde.";
+  }
+
+  if (status >= 400) {
+    return "No se pudo completar la solicitud.";
+  }
+
+  return "Error de comunicación con el servidor.";
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const isJson = response.headers.get("content-type")?.includes("application/json");
-  const payload = isJson ? await response.json() : null;
+  let payload: unknown = null;
+
+  if (isJson) {
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error(INVALID_RESPONSE_MESSAGE);
+    }
+  }
 
   if (!response.ok) {
-    const message =
-      (payload && typeof payload === "object" && "detail" in payload && String(payload.detail)) ||
-      (payload && typeof payload === "object" && "message" in payload && String(payload.message)) ||
-      `HTTP ${response.status}`;
-
-    throw new Error(message);
+    throw new Error(getHttpErrorMessage(response.status));
   }
 
   return payload as T;
 }
 
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  let response: Response;
+
+  try {
+    response = await fetch(url, init);
+  } catch {
+    throw new Error("No se pudo conectar con el servidor. Inténtalo de nuevo.");
+  }
+
+  return parseResponse<T>(response);
+}
+
 export async function getRecords(): Promise<RecordsResponse> {
   try {
-    const response = await fetch(`${getApiUrl()}/records`, {
+    return await requestJson<RecordsResponse>(`${getApiUrl()}/records`, {
       method: "GET",
       cache: "no-store",
     });
-
-    return await parseResponse<RecordsResponse>(response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Error desconocido";
-    throw new Error(`No se pudieron obtener los registros: ${message}`);
+  } catch {
+    throw new Error("No se pudieron obtener los registros. Inténtalo de nuevo.");
   }
 }
 
 export async function getRecordById(id: string): Promise<Record> {
   try {
-    const response = await fetch(`${getApiUrl()}/records/${id}`, {
+    return await requestJson<Record>(`${getApiUrl()}/records/${id}`, {
       method: "GET",
       cache: "no-store",
     });
-
-    return await parseResponse<Record>(response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Error desconocido";
-    throw new Error(`No se pudo obtener el registro ${id}: ${message}`);
+  } catch {
+    throw new Error("No se pudo obtener el registro solicitado. Inténtalo de nuevo.");
   }
 }
 
@@ -249,6 +289,70 @@ export async function analyzeIncidents(file: File): Promise<IncidentMetricsRespo
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error desconocido";
     throw new Error(`No se pudo analizar el archivo de incidencias: ${message}`);
+  }
+}
+
+export async function createIncident(payload: IncidentCreatePayload): Promise<Incident> {
+  try {
+    const response = await fetch(getIncidentsRouteBase(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await parseResponse<Incident>(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    throw new Error(`No se pudo registrar la incidencia: ${message}`);
+  }
+}
+
+export type IncidentFilters = Partial<Pick<Incident, "status" | "origin" | "branch" | "category">>;
+
+export async function getIncidents(filters: IncidentFilters = {}): Promise<Incident[]> {
+  try {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+    const query = params.toString();
+    return await requestJson<Incident[]>(
+      `${getIncidentsRouteBase()}${query ? `?${query}` : ""}`,
+      { cache: "no-store" },
+    );
+  } catch {
+    throw new Error("No se pudieron obtener las incidencias. Inténtalo de nuevo.");
+  }
+}
+
+export async function getIncidentById(id: string): Promise<Incident> {
+  try {
+    return await requestJson<Incident>(`${getIncidentsRouteBase()}/${id}`, {
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("No se pudo obtener la incidencia solicitada. Inténtalo de nuevo.");
+  }
+}
+
+export async function getIncidentSummary(): Promise<IncidentSummary> {
+  try {
+    return await requestJson<IncidentSummary>(`${getIncidentsRouteBase()}/summary`, {
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("No se pudo obtener el resumen de incidencias. Inténtalo de nuevo.");
+  }
+}
+
+export async function updateIncidentStatus(id: string, status: IncidentStatus): Promise<Incident> {
+  try {
+    return await requestJson<Incident>(`${getIncidentsRouteBase()}/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+  } catch {
+    throw new Error("No se pudo actualizar el estado de la incidencia. Inténtalo de nuevo.");
   }
 }
 

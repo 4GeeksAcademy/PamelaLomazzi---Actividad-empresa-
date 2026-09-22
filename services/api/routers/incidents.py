@@ -1,9 +1,22 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from services.api.schemas.incidents import ErrorResponse, IncidentMetricsResponse
+from services.api.schemas.incident_crud import (
+    IncidentCreate,
+    IncidentResponse,
+    IncidentStatusUpdate,
+    IncidentSummary,
+)
+from services.api.db import get_db
+from services.api.services.incidents_service import (
+    IncidentNotFoundError,
+    IncidentsService,
+    InvalidIncidentTransitionError,
+)
+from sqlalchemy.orm import Session
 from services.api.services.incidents_analysis_service import (
     IncidentAnalysisResult,
     IncidentAnalysisService,
@@ -13,6 +26,58 @@ from services.api.services.incidents_analysis_service import (
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 analysis_service = IncidentAnalysisService()
 _last_result: IncidentAnalysisResult | None = None
+
+
+def _service(db: Session) -> IncidentsService:
+    return IncidentsService(db)
+
+
+@router.post("", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
+def create_incident(payload: IncidentCreate, db: Session = Depends(get_db)) -> IncidentResponse:
+    return _service(db).create(payload)
+
+
+@router.get("", response_model=list[IncidentResponse])
+def list_incidents(
+    status_filter: str | None = Query(default=None, alias="status"),
+    origin: str | None = None,
+    branch: str | None = None,
+    category: str | None = None,
+    db: Session = Depends(get_db),
+) -> list[IncidentResponse]:
+    return _service(db).list(
+        status=status_filter, origin=origin, branch=branch, category=category
+    )
+
+
+@router.get("/summary", response_model=IncidentSummary)
+def incident_summary(db: Session = Depends(get_db)) -> IncidentSummary:
+    return _service(db).summary()
+
+
+@router.get("/{incident_id}", response_model=IncidentResponse)
+def get_incident(incident_id: str, db: Session = Depends(get_db)) -> IncidentResponse:
+    try:
+        return _service(db).get(incident_id)
+    except IncidentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Incidencia no encontrada.") from exc
+
+
+@router.patch("/{incident_id}/status", response_model=IncidentResponse)
+def update_incident_status(
+    incident_id: str,
+    payload: IncidentStatusUpdate,
+    db: Session = Depends(get_db),
+) -> IncidentResponse:
+    try:
+        return _service(db).update_status(incident_id, payload.status)
+    except IncidentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Incidencia no encontrada.") from exc
+    except InvalidIncidentTransitionError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Transición de estado no permitida para esta incidencia.",
+        ) from exc
 
 
 @router.post(
@@ -37,7 +102,14 @@ async def analyze_incidents(file: UploadFile = File(...)) -> IncidentMetricsResp
             detail="El archivo debe ser un CSV válido.",
         )
 
-    raw_bytes = await file.read()
+    try:
+        raw_bytes = await file.read()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error al leer el archivo cargado.",
+        ) from exc
+
     if not raw_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,8 +156,14 @@ def export_last_results() -> StreamingResponse:
             detail="No hay resultados para exportar. Ejecuta primero /api/incidents/analyze.",
         )
 
-    rows = analysis_service.build_export_rows(_last_result)
-    csv_content = analysis_service.export_rows_to_csv_text(rows)
+    try:
+        rows = analysis_service.build_export_rows(_last_result)
+        csv_content = analysis_service.export_rows_to_csv_text(rows)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo generar la exportación de los resultados.",
+        ) from exc
 
     return StreamingResponse(
         iter([csv_content]),
