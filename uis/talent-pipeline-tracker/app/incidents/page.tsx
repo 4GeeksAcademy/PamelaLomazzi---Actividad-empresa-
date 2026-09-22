@@ -1,325 +1,120 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 
-import { analyzeIncidents, downloadIncidentResultsCsv } from "@/services/api";
-import type { IncidentMetricsResponse } from "@/types/incidents";
+import {
+  getIncidentById,
+  getIncidents,
+  getIncidentSummary,
+  updateIncidentStatus,
+  type IncidentFilters,
+} from "@/services/api";
+import {
+  HEALTHCORE_BRANCHES,
+  INCIDENT_CATEGORIES,
+  INCIDENT_ORIGINS,
+  type Incident,
+  type IncidentStatus,
+  type IncidentSummary,
+} from "@/types/incident";
 
-type UiState = "idle" | "loading" | "success" | "error";
+const statuses: IncidentStatus[] = ["open", "in_progress", "resolved", "discarded"];
+const transitions: Record<IncidentStatus, IncidentStatus[]> = {
+  open: ["in_progress", "discarded"],
+  in_progress: ["resolved", "discarded"],
+  resolved: [],
+  discarded: [],
+};
+const labels: Record<string, string> = {
+  open: "Abierta", in_progress: "En progreso", resolved: "Resuelta", discarded: "Descartada",
+};
 
-function formatMetric(value: number | null): string {
-  if (value === null) {
-    return "N/A";
-  }
-
-  return Number.isInteger(value) ? `${value}` : value.toFixed(2);
-}
-
-function toRows(record: Record<string, number>): Array<[string, number]> {
-  return Object.entries(record).sort(([a], [b]) => a.localeCompare(b));
+function CounterGroup({ title, values }: { title: string; values: Record<string, number> }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</h3>
+      <div className="mt-3 space-y-2">
+        {Object.entries(values).length ? Object.entries(values).map(([key, value]) => (
+          <div key={key} className="flex justify-between text-sm"><span className="text-slate-600">{labels[key] ?? key}</span><strong>{value}</strong></div>
+        )) : <p className="text-sm text-slate-400">Sin datos</p>}
+      </div>
+    </div>
+  );
 }
 
 export default function IncidentsPage() {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [summary, setSummary] = useState<IncidentSummary | null>(null);
+  const [filters, setFilters] = useState<IncidentFilters>({});
+  const [selected, setSelected] = useState<Incident | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [state, setState] = useState<UiState>("idle");
-  const [isDragging, setIsDragging] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [result, setResult] = useState<IncidentMetricsResponse | null>(null);
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const [items, metrics] = await Promise.all([getIncidents(filters), getIncidentSummary()]);
+      setIncidents(items); setSummary(metrics);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudieron cargar las incidencias.");
+    } finally { setLoading(false); }
+  }, [filters]);
 
-  const invalidRows = useMemo(
-    () => (result ? toRows(result.invalid_reason_counts) : []),
-    [result],
-  );
-  const categoryRows = useMemo(
-    () => (result ? toRows(result.category_counts) : []),
-    [result],
-  );
-  const statusRows = useMemo(() => (result ? toRows(result.status_counts) : []), [result]);
+  useEffect(() => {
+    void Promise.resolve().then(() => load());
+  }, [load]);
 
-  function setFile(file: File | null) {
-    if (file && !file.name.toLowerCase().endsWith(".csv")) {
-      setSelectedFile(null);
-      setErrorMessage("El archivo seleccionado no es CSV.");
-      setState("error");
-      return;
-    }
-
-    setSelectedFile(file);
-    setErrorMessage(null);
-    setState("idle");
+  async function changeStatus(id: string, status: IncidentStatus) {
+    setUpdating(id); setError(null);
+    try {
+      const updated = await updateIncidentStatus(id, status);
+      setIncidents((current) => current.map((item) => item.id === id ? updated : item));
+      setSelected((current) => current?.id === id ? updated : current);
+      const metrics = await getIncidentSummary(); setSummary(metrics);
+    } catch (err) { setError(err instanceof Error ? err.message : "No se pudo actualizar el estado."); }
+    finally { setUpdating(null); }
   }
 
-  async function handleAnalyze() {
-    if (!selectedFile) {
-      setErrorMessage("Debes seleccionar un archivo CSV antes de analizar.");
-      setState("error");
-      return;
-    }
-
-    setState("loading");
-    setErrorMessage(null);
-
-    try {
-      const analysis = await analyzeIncidents(selectedFile);
-      setResult(analysis);
-      setState("success");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Error desconocido";
-      setErrorMessage(message);
-      setState("error");
-    }
+  async function showDetail(id: string) {
+    try { setSelected(await getIncidentById(id)); }
+    catch (err) { setError(err instanceof Error ? err.message : "No se pudo cargar el detalle."); }
   }
 
-  async function handleExport() {
-    setIsExporting(true);
-    setErrorMessage(null);
-
-    try {
-      const blob = await downloadIncidentResultsCsv();
-      const objectUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = objectUrl;
-      anchor.download = "results.csv";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(objectUrl);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Error desconocido";
-      setErrorMessage(message);
-      setState("error");
-    } finally {
-      setIsExporting(false);
-    }
+  function setFilter(key: keyof IncidentFilters, value: string) {
+    setFilters((current) => ({ ...current, [key]: value || undefined }));
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-10 text-slate-900">
-      <header className="border-b border-slate-200 bg-gradient-to-r from-cyan-900 via-slate-900 to-cyan-800 text-white">
-        <div className="mx-auto w-full max-w-7xl px-6 py-8 md:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100">
-            Postventa
-          </p>
-          <h1 className="mt-2 text-3xl font-bold md:text-4xl">Analisis de Incidencias</h1>
-          <p className="mt-3 max-w-3xl text-sm text-cyan-50 md:text-base">
-            Carga un archivo CSV para validar registros, detectar incidencias corruptas y visualizar
-            metricas operativas en tiempo real.
-          </p>
-        </div>
-      </header>
+    <main className="min-h-screen bg-slate-100 px-6 py-8 text-slate-900 md:px-8">
+      <div className="mx-auto max-w-7xl">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">HealthCore</p><h1 className="mt-2 text-3xl font-bold">Gestor de Incidencias</h1><p className="mt-2 text-sm text-slate-600">Consulta, filtra y gestiona el estado de las incidencias centralizadas.</p></div>
+          <Link href="/incidents/new" className="rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-800">+ Nueva incidencia</Link>
+        </header>
 
-      <main className="mx-auto w-full max-w-7xl px-6 py-8 md:px-8">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <h2 className="text-lg font-semibold text-slate-900">Carga de archivo</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Formato esperado: CSV con cabeceras de incidencias.
-          </p>
+        {error && <div role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
 
-          <div
-            className={`mt-4 rounded-2xl border-2 border-dashed p-8 text-center transition ${
-              isDragging
-                ? "border-cyan-600 bg-cyan-50"
-                : "border-slate-300 bg-slate-50 hover:border-cyan-500 hover:bg-cyan-50/50"
-            }`}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(event) => {
-              event.preventDefault();
-              setIsDragging(false);
-              const droppedFile = event.dataTransfer.files?.[0] ?? null;
-              setFile(droppedFile);
-            }}
-          >
-            <p className="text-sm font-medium text-slate-700">
-              Arrastra tu CSV aqui o usa el selector de archivos.
-            </p>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="mt-4 inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Seleccionar archivo
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
-            {selectedFile ? (
-              <p className="mt-4 text-sm text-cyan-800">
-                Archivo listo: <span className="font-semibold">{selectedFile.name}</span>
-              </p>
-            ) : null}
-          </div>
+        {summary && <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 shadow-sm"><p className="text-xs font-semibold uppercase tracking-wider text-cyan-700">Total</p><p className="mt-2 text-3xl font-bold text-cyan-900">{summary.total}</p></div><CounterGroup title="Por estado" values={summary.by_status} /><CounterGroup title="Por categoría" values={summary.by_category} /><CounterGroup title="Por origen" values={summary.by_origin} /></section>}
+        {summary && <section className="mt-4"><CounterGroup title="Por sede" values={summary.by_branch} /></section>}
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void handleAnalyze()}
-              disabled={state === "loading"}
-              className="inline-flex h-11 items-center rounded-xl bg-cyan-700 px-5 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {state === "loading" ? "Analizando..." : "Analizar incidencias"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleExport()}
-              disabled={isExporting || !result}
-              className="inline-flex h-11 items-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isExporting ? "Descargando..." : "Descargar resultados en CSV"}
-            </button>
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-4">
+            <select aria-label="Filtrar estado" value={filters.status ?? ""} onChange={(e) => setFilter("status", e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Todos los estados</option>{statuses.map((item) => <option key={item} value={item}>{labels[item]}</option>)}</select>
+            <select aria-label="Filtrar origen" value={filters.origin ?? ""} onChange={(e) => setFilter("origin", e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Todos los orígenes</option>{INCIDENT_ORIGINS.map((item) => <option key={item}>{item}</option>)}</select>
+            <select aria-label="Filtrar sede" value={filters.branch ?? ""} onChange={(e) => setFilter("branch", e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Todas las sedes</option>{HEALTHCORE_BRANCHES.map((item) => <option key={item}>{item}</option>)}</select>
+            <select aria-label="Filtrar categoría" value={filters.category ?? ""} onChange={(e) => setFilter("category", e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Todas las categorías</option>{INCIDENT_CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select>
           </div>
         </section>
 
-        {errorMessage ? (
-          <section className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700 shadow-sm">
-            <h3 className="text-base font-semibold">Error de comunicacion con la API</h3>
-            <p className="mt-1 text-sm">{errorMessage}</p>
-          </section>
-        ) : null}
+        <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-5 py-4"><h2 className="font-semibold">Incidencias ({incidents.length})</h2></div>
+          {loading ? <p className="p-6 text-sm text-slate-500">Cargando incidencias…</p> : incidents.length === 0 ? <p className="p-6 text-sm text-slate-500">No hay incidencias para estos filtros.</p> : <div className="divide-y divide-slate-100">{incidents.map((incident) => <article key={incident.id} className="p-5"><div className="flex flex-wrap justify-between gap-3"><div><button onClick={() => void showDetail(incident.id)} className="text-left font-semibold text-cyan-800 hover:underline">{incident.title}</button><p className="mt-1 text-sm text-slate-600">{incident.description}</p><p className="mt-2 text-xs text-slate-500">{incident.category} · {incident.origin} · {incident.branch}</p></div><div className="flex items-center gap-2"><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">{labels[incident.status] ?? incident.status}</span>{transitions[incident.status as IncidentStatus].map((next) => <button key={next} disabled={updating === incident.id} onClick={() => void changeStatus(incident.id, next)} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50">{updating === incident.id ? "…" : labels[next]}</button>)}</div></div></article>)}</div>}
+        </section>
+      </div>
 
-        {result ? (
-          <section className="mt-6 space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                  Total procesados
-                </p>
-                <p className="mt-2 text-3xl font-bold text-slate-900">{result.total_processed}</p>
-              </article>
-              <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">
-                  Registros validos
-                </p>
-                <p className="mt-2 text-3xl font-bold text-emerald-800">{result.total_valid}</p>
-              </article>
-              <article className="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-widest text-rose-700">
-                  Registros invalidos
-                </p>
-                <p className="mt-2 text-3xl font-bold text-rose-800">{result.total_invalid}</p>
-              </article>
-              <article className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-widest text-cyan-700">
-                  Satisfaccion promedio
-                </p>
-                <p className="mt-2 text-3xl font-bold text-cyan-900">
-                  {formatMetric(result.avg_closed_satisfaction)}
-                </p>
-                <p className="mt-1 text-xs text-cyan-800">
-                  Casos cerrados con puntuacion: {result.closed_scores_count}
-                </p>
-              </article>
-            </div>
-
-            {result.total_invalid > 0 ? (
-              <section className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
-                <h3 className="text-base font-semibold text-amber-900">
-                  Alerta: se detectaron {result.total_invalid} registros invalidos
-                </h3>
-                <ul className="mt-2 space-y-1 text-sm text-amber-800">
-                  {invalidRows.map(([reason, count]) => (
-                    <li key={reason}>
-                      {reason}: <span className="font-semibold">{count}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <header className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
-                    Desglose por Categoria
-                  </h3>
-                </header>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200">
-                    <thead className="bg-white">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Categoria
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Cantidad
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {categoryRows.length > 0 ? (
-                        categoryRows.map(([category, count]) => (
-                          <tr key={category}>
-                            <td className="px-4 py-3 text-sm text-slate-700">{category}</td>
-                            <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                              {count}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td className="px-4 py-4 text-sm text-slate-500" colSpan={2}>
-                            Sin registros validos para categorias.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <header className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
-                    Desglose por Estado
-                  </h3>
-                </header>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200">
-                    <thead className="bg-white">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Estado
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Cantidad
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {statusRows.length > 0 ? (
-                        statusRows.map(([status, count]) => (
-                          <tr key={status}>
-                            <td className="px-4 py-3 text-sm text-slate-700">{status}</td>
-                            <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                              {count}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td className="px-4 py-4 text-sm text-slate-500" colSpan={2}>
-                            Sin registros validos para estados.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </section>
-        ) : null}
-      </main>
-    </div>
+      {selected && <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/40 p-6" onClick={() => setSelected(null)}><section role="dialog" aria-modal="true" className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}><div className="flex justify-between gap-4"><h2 className="text-xl font-bold">{selected.title}</h2><button onClick={() => setSelected(null)} aria-label="Cerrar detalle" className="text-2xl text-slate-400">×</button></div><dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2"><div><dt className="font-semibold text-slate-500">Estado</dt><dd>{labels[selected.status] ?? selected.status}</dd></div><div><dt className="font-semibold text-slate-500">Categoría</dt><dd>{selected.category}</dd></div><div><dt className="font-semibold text-slate-500">Origen</dt><dd>{selected.origin}</dd></div><div><dt className="font-semibold text-slate-500">Sede</dt><dd>{selected.branch}</dd></div><div className="sm:col-span-2"><dt className="font-semibold text-slate-500">Descripción</dt><dd className="mt-1 whitespace-pre-wrap">{selected.description}</dd></div><div><dt className="font-semibold text-slate-500">Creada</dt><dd>{new Date(selected.created_at).toLocaleString("es-ES")}</dd></div><div><dt className="font-semibold text-slate-500">Actualizada</dt><dd>{new Date(selected.updated_at).toLocaleString("es-ES")}</dd></div></dl></section></div>}
+    </main>
   );
 }

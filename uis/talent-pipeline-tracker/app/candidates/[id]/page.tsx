@@ -12,7 +12,7 @@ import {
   getRecordById,
   patchRecordStatusOrStage,
 } from "@/services/api";
-import type { CandidateStage, CandidateStatus, Note, Record } from "@/types/candidate";
+import type { CandidateStage, CandidateStatus, Note, Record as CandidateRecord } from "@/types/candidate";
 
 const STATUS_OPTIONS: Array<{ value: CandidateStatus; label: string }> = [
   { value: "received", label: "Recibida" },
@@ -29,14 +29,14 @@ const STAGE_OPTIONS: Array<{ value: CandidateStage; label: string }> = [
   { value: "offer_presented", label: "Oferta presentada" },
 ];
 
-const STATUS_STYLE: Record<CandidateStatus, string> = {
+const STATUS_STYLE: globalThis.Record<CandidateStatus, string> = {
   received: "border-sky-200 bg-sky-50 text-sky-700",
   in_progress: "border-amber-200 bg-amber-50 text-amber-700",
   selected: "border-emerald-200 bg-emerald-50 text-emerald-700",
   discarded: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
-const STAGE_STYLE: Record<CandidateStage, string> = {
+const STAGE_STYLE: globalThis.Record<CandidateStage, string> = {
   pending: "border-slate-200 bg-slate-100 text-slate-700",
   review: "border-cyan-200 bg-cyan-50 text-cyan-700",
   personal_interview: "border-violet-200 bg-violet-50 text-violet-700",
@@ -56,7 +56,7 @@ export default function CandidateDetailPage() {
   const params = useParams<{ id: string }>();
   const recordId = params?.id;
 
-  const [record, setRecord] = useState<Record | null>(null);
+  const [record, setRecord] = useState<CandidateRecord | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
