@@ -13,6 +13,7 @@ import {
   patchRecordStatusOrStage,
 } from "@/services/api";
 import type { CandidateStage, CandidateStatus, Note, Record } from "@/types/candidate";
+import { formatCandidateDate } from "@/utils/candidate-form";
 
 const STATUS_OPTIONS: Array<{ value: CandidateStatus; label: string }> = [
   { value: "received", label: "Recibida" },
@@ -98,12 +99,7 @@ export default function CandidateDetailPage() {
     void loadCandidateData();
   }, [recordId]);
 
-  const appliedDate = record?.applied_at
-    ? new Date(record.applied_at).toLocaleString("es-ES", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })
-    : "-";
+  const appliedDate = formatCandidateDate(record?.applied_at);
 
   async function handleStatusChange(nextStatus: CandidateStatus) {
     if (!record || !recordId) {

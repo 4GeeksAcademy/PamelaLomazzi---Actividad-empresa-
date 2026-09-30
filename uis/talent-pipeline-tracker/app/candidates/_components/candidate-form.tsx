@@ -1,9 +1,12 @@
 "use client";
 
 import type { RecordPayload } from "@/types/candidate";
+import {
+  type CandidateFormErrors,
+  type CandidateFormState,
+  validateCandidateForm,
+} from "@/utils/candidate-form";
 import { useMemo, useState } from "react";
-
-type FormErrors = Partial<Record<keyof RecordPayload, string>>;
 
 export interface CandidateFormProps {
   title: string;
@@ -16,15 +19,12 @@ export interface CandidateFormProps {
   onSubmit: (values: RecordPayload) => Promise<void>;
 }
 
-interface CandidateFormState {
-  full_name: string;
-  email: string;
-  phone: string;
-  position: string;
+interface CandidateFormOptionalState {
   linkedin_url: string;
   cv_url: string;
-  experience_years: string;
 }
+
+type FormState = CandidateFormState & CandidateFormOptionalState;
 
 const DEFAULT_VALUES: CandidateFormState = {
   full_name: "",
@@ -36,7 +36,7 @@ const DEFAULT_VALUES: CandidateFormState = {
   experience_years: "",
 };
 
-function toFormValues(values?: RecordPayload): CandidateFormState {
+function toFormValues(values?: RecordPayload): FormState {
   if (!values) {
     return DEFAULT_VALUES;
   }
@@ -95,16 +95,16 @@ export default function CandidateForm({
   submitSuccess,
   onSubmit,
 }: CandidateFormProps) {
-  const [formValues, setFormValues] = useState<CandidateFormState>(
+  const [formValues, setFormValues] = useState<FormState>(
     toFormValues(initialValues),
   );
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [errors, setErrors] = useState<CandidateFormErrors>({});
 
   const hasClientErrors = useMemo(() => Object.keys(errors).length > 0, [errors]);
 
   function handleChange(
-    field: keyof CandidateFormState,
-    value: CandidateFormState[keyof CandidateFormState],
+    field: keyof FormState,
+    value: FormState[keyof FormState],
   ) {
     setFormValues((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => {
@@ -121,7 +121,7 @@ export default function CandidateForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const currentErrors = validate(formValues);
+    const currentErrors = validateCandidateForm(formValues);
     setErrors(currentErrors);
 
     if (Object.keys(currentErrors).length > 0) {
