@@ -50,3 +50,13 @@ class SupplyConsumptionResponse(SupplyConsumptionCreate):
 
     id: int
     created_at: datetime
+
+
+class InboundOrderResponse(SupplyDeliveryResponse):
+    order_type: Literal["inbound"] = "inbound"
+    product_name: str
+
+
+class OutboundOrderResponse(SupplyConsumptionResponse):
+    order_type: Literal["outbound"] = "outbound"
+    product_name: str

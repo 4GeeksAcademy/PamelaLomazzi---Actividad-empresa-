@@ -9,8 +9,10 @@ from sqlmodel import Session, select
 from services.database import get_db
 from services.models import MedicalSupply, SupplyConsumption, SupplyDelivery
 from services.schemas import (
+    InboundOrderResponse,
     MedicalSupplyCreate,
     MedicalSupplyResponse,
+    OutboundOrderResponse,
     SupplyConsumptionCreate,
     SupplyConsumptionResponse,
     SupplyDeliveryCreate,
@@ -146,8 +148,21 @@ def register_consumption(
     return consumption
 
 
-@router.get("/orders", response_model=list[SupplyDeliveryResponse])
-def list_orders(session: Session = Depends(get_db)) -> Sequence[SupplyDelivery]:
-    return session.exec(
-        select(SupplyDelivery).order_by(SupplyDelivery.created_at.desc())
+@router.get("/orders", response_model=list[InboundOrderResponse | OutboundOrderResponse])
+def list_orders(
+    session: Session = Depends(get_db),
+) -> Sequence[InboundOrderResponse | OutboundOrderResponse]:
+    deliveries = session.exec(
+        select(SupplyDelivery, MedicalSupply.name).join(MedicalSupply)
     ).all()
+    consumptions = session.exec(
+        select(SupplyConsumption, MedicalSupply.name).join(MedicalSupply)
+    ).all()
+    orders = [
+        InboundOrderResponse(**delivery.model_dump(), product_name=name)
+        for delivery, name in deliveries
+    ] + [
+        OutboundOrderResponse(**consumption.model_dump(), product_name=name)
+        for consumption, name in consumptions
+    ]
+    return sorted(orders, key=lambda order: order.created_at, reverse=True)
