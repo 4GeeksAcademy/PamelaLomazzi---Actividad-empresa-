@@ -1,0 +1,71 @@
+services:
+  interfaces:
+    build:
+      context: .
+      dockerfile: uis/Dockerfile
+    ports:
+      - "${WEBSITE_PORT:-3000}:3000"
+      - "${BACKOFFICE_PORT:-3001}:3001"
+    environment:
+      INVENTORY_API_URL: http://backend:8000
+      NEXT_PUBLIC_INVENTORY_API_URL: /api/inventory
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - ./index.html:/app/index.html:ro
+      - ./apply.html:/app/apply.html:ro
+      - ./i18n.js:/app/i18n.js:ro
+      - ./validation.js:/app/validation.js:ro
+      - ./imagenes:/app/imagenes:ro
+      - ./uis/website:/app/uis/website
+      - ./uis/talent-pipeline-tracker:/app/uis/talent-pipeline-tracker
+      - ./uis/start.sh:/app/uis/start.sh:ro
+      - website_node_modules:/app/uis/website/node_modules
+      - backoffice_node_modules:/app/uis/talent-pipeline-tracker/node_modules
+      - backoffice_next:/app/uis/talent-pipeline-tracker/.next
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "Promise.all(['http://127.0.0.1:3000/', 'http://127.0.0.1:3001/api/inventory/products'].map(url => fetch(url, { signal: AbortSignal.timeout(3000) }))).then(responses => process.exit(responses.every(response => response.ok) ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - healthcore
+
+  backend:
+    build:
+      context: ./services
+      dockerfile: Dockerfile
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/healthcore.db}
+    volumes:
+      - ./services:/app/services
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).close()"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - healthcore
+
+networks:
+  healthcore:
+    driver: bridge
+
+volumes:
+  website_node_modules:
+  backoffice_node_modules:
+  backoffice_next:
+  backend_data:
