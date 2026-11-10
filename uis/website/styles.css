@@ -1,0 +1,6 @@
+@import "tailwindcss" source(none);
+
+@source "../../index.html";
+@source "../../apply.html";
+@source "../../i18n.js";
+@source "../../validation.js";

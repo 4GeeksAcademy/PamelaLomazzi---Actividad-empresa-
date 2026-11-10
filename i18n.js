@@ -223,6 +223,10 @@
 		document.title = seo.title;
 		const desc = document.querySelector('meta[name="description"]');
 		if (desc) desc.setAttribute("content", seo.description);
+				const ogTitle = document.querySelector('meta[property="og:title"]');
+				if (ogTitle) ogTitle.setAttribute("content", seo.title);
+				const ogDescription = document.querySelector('meta[property="og:description"]');
+				if (ogDescription) ogDescription.setAttribute("content", seo.description);
 		const ogLocale = document.querySelector('meta[property="og:locale"]');
 		if (ogLocale) ogLocale.setAttribute("content", seo.locale);
 	}

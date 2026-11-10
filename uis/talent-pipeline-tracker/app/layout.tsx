@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
@@ -8,15 +8,18 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "HealthCore | Selección de Personal Médico y Administrativo",
+  title: "Pipeline de selección médica y administrativa | HealthCore",
   description:
-    "Herramienta interna de People & Talent para la gestión del pipeline de selección médica y administrativa en HealthCore.",
+    "Plataforma interna de HealthCore para registrar candidaturas y gestionar etapas, estados y seguimiento de los procesos de selección médica y administrativa.",
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    siteName: "HealthCore",
+    title: "Pipeline de selección médica y administrativa | HealthCore",
+    description:
+      "Plataforma interna de HealthCore para registrar candidaturas y gestionar etapas, estados y seguimiento de los procesos de selección médica y administrativa.",
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +30,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <nav className="border-b border-slate-200 bg-white/95 backdrop-blur">

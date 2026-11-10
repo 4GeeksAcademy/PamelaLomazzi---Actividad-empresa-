@@ -50,3 +50,70 @@ def root() -> dict[str, str]:
 @app.get("/health", tags=["health"])
 def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/records", tags=["candidates"])
+def get_records() -> dict[str, object]:
+    records = [
+        {
+            "id": "candidate-demo-001",
+            "full_name": "Lucia Fernandez",
+            "email": "lucia.fernandez@example.com",
+            "phone": "+34 600 123 001",
+            "position": "Medica de familia",
+            "linkedin_url": None,
+            "cv_url": None,
+            "experience_years": 6,
+            "status": "in_progress",
+            "stage": "review",
+            "applied_at": "2026-10-28T09:30:00Z",
+            "updated_at": "2026-11-03T14:15:00Z",
+            "notes_count": 1,
+        },
+        {
+            "id": "candidate-demo-002",
+            "full_name": "Mateo Ruiz",
+            "email": "mateo.ruiz@example.com",
+            "phone": "+34 600 123 002",
+            "position": "Enfermero de urgencias",
+            "linkedin_url": None,
+            "cv_url": None,
+            "experience_years": 4,
+            "status": "received",
+            "stage": "pending",
+            "applied_at": "2026-11-02T11:00:00Z",
+            "updated_at": "2026-11-02T11:00:00Z",
+            "notes_count": 0,
+        },
+        {
+            "id": "candidate-demo-003",
+            "full_name": "Sara Martin",
+            "email": "sara.martin@example.com",
+            "phone": "+34 600 123 003",
+            "position": "Tecnica de laboratorio",
+            "linkedin_url": None,
+            "cv_url": None,
+            "experience_years": 3,
+            "status": "selected",
+            "stage": "offer_presented",
+            "applied_at": "2026-10-18T08:45:00Z",
+            "updated_at": "2026-11-05T16:20:00Z",
+            "notes_count": 2,
+        },
+        {
+            "id": "candidate-demo-004",
+            "full_name": "Daniel Ortega",
+            "email": "daniel.ortega@example.com",
+            "phone": "+34 600 123 004",
+            "position": "Administrativo de clinica",
+            "linkedin_url": None,
+            "cv_url": None,
+            "experience_years": 8,
+            "status": "discarded",
+            "stage": "personal_interview",
+            "applied_at": "2026-10-12T13:10:00Z",
+            "updated_at": "2026-10-25T10:00:00Z",
+            "notes_count": 1,
+        },
+    ]
+    return {"total": len(records), "page": 1, "limit": len(records), "data": records}
