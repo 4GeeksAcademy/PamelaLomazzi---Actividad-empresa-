@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from services.api.api_v1 import api_router
 from services.database import init_db
 from services.routers.inventory import router as inventory_router
+from services.schemas import HealthResponse, RecordsResponse, RootResponse
 
 
 def _get_cors_origin_regex() -> str:
@@ -42,18 +43,18 @@ app.include_router(api_router)
 app.include_router(inventory_router)
 
 
-@app.get("/", tags=["health"])
-def root() -> dict[str, str]:
-    return {"status": "ok", "message": "HealthCore API v1"}
+@app.get("/", tags=["health"], response_model=RootResponse)
+def root() -> RootResponse:
+    return RootResponse(status="ok", message="HealthCore API v1")
 
 
-@app.get("/health", tags=["health"])
-def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health", tags=["health"], response_model=HealthResponse)
+def health_check() -> HealthResponse:
+    return HealthResponse(status="ok")
 
 
-@app.get("/records", tags=["candidates"])
-def get_records() -> dict[str, object]:
+@app.get("/records", tags=["candidates"], response_model=RecordsResponse)
+def get_records() -> RecordsResponse:
     records = [
         {
             "id": "candidate-demo-001",
@@ -116,4 +117,4 @@ def get_records() -> dict[str, object]:
             "notes_count": 1,
         },
     ]
-    return {"total": len(records), "page": 1, "limit": len(records), "data": records}
+    return RecordsResponse(total=len(records), page=1, limit=len(records), data=records)
