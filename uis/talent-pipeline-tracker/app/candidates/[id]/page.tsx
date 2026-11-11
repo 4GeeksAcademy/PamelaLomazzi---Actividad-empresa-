@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   createNote,
@@ -12,7 +13,12 @@ import {
   getRecordById,
   patchRecordStatusOrStage,
 } from "@/services/api";
-import type { CandidateStage, CandidateStatus, Note, Record } from "@/types/candidate";
+import type { CandidateStage, CandidateStatus, Note, Record as CandidateRecord } from "@/types/candidate";
+import type { CandidateNotesProps } from "../_components/candidate-notes";
+
+const CandidateNotes = dynamic(() => import("../_components/candidate-notes"), {
+  loading: () => <div role="status" className="min-h-80 animate-pulse bg-slate-200">Cargando notas...</div>,
+});
 
 const STATUS_OPTIONS: Array<{ value: CandidateStatus; label: string }> = [
   { value: "received", label: "Recibida" },
@@ -56,7 +62,7 @@ export default function CandidateDetailPage() {
   const params = useParams<{ id: string }>();
   const recordId = params?.id;
 
-  const [record, setRecord] = useState<Record | null>(null);
+  const [record, setRecord] = useState<CandidateRecord | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -400,71 +406,52 @@ export default function CandidateDetailPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-3">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold text-slate-900">Notas internas de selección HealthCore</h2>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                  {notes.length} nota(s)
-                </span>
-              </div>
-
-              <form onSubmit={handleCreateNote} className="mb-5 space-y-3 rounded-xl border border-slate-200 p-4">
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium text-slate-700">Nueva nota interna</span>
-                  <textarea
-                    value={newNote}
-                    onChange={(event) => setNewNote(event.target.value)}
-                    rows={3}
-                    placeholder="Escribe una observación para el comité de selección médica o administrativa..."
-                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-cyan-600"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={isCreatingNote}
-                  className="inline-flex h-10 items-center rounded-xl bg-cyan-700 px-4 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isCreatingNote ? "Guardando nota..." : "Agregar nota"}
-                </button>
-                {noteError ? <p className="text-sm text-rose-700">{noteError}</p> : null}
-              </form>
-
-              {notes.length === 0 ? (
-                <p className="text-sm text-slate-600">Aún no hay notas para esta candidatura.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {notes.map((note) => (
-                    <li
-                      key={note.id}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm text-slate-800">{note.content}</p>
-                          <p className="mt-2 text-xs text-slate-500">
-                            {new Date(note.created_at).toLocaleString("es-ES", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteNote(note.id)}
-                          disabled={deletingNoteId === note.id}
-                          className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          {deletingNoteId === note.id ? "Eliminando..." : "Eliminar"}
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+            <DeferredCandidateNotes
+              key={record.id}
+              notes={notes}
+              draft={newNote}
+              error={noteError}
+              isCreating={isCreatingNote}
+              deletingNoteId={deletingNoteId}
+              onDraftChange={setNewNote}
+              onCreate={handleCreateNote}
+              onDelete={(noteId) => void handleDeleteNote(noteId)}
+            />
           </div>
         ) : null}
       </main>
+    </div>
+  );
+}
+
+function DeferredCandidateNotes(props: CandidateNotesProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (typeof IntersectionObserver === "undefined") {
+      const frame = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "200px" });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} className="min-h-80 lg:col-span-3">
+      {visible ? <CandidateNotes {...props} /> : (
+        <button type="button" onClick={() => setVisible(true)} className="text-sm font-medium text-cyan-700 underline">
+          Cargar notas
+        </button>
+      )}
     </div>
   );
 }
