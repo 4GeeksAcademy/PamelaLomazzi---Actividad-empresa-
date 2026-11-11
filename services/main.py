@@ -11,6 +11,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 from sqlmodel import Session
 
 from services.api.api_v1 import api_router
+from services.audit import seed_audit_events
 from services.database import engine, init_db
 from services.routers.candidates import router as candidates_router, seed_candidates
 from services.routers.inventory import router as inventory_router
@@ -33,6 +34,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
     with Session(engine) as session:
         seed_candidates(session, _demo_records().data)
+        seed_audit_events(session)
     yield
 
 

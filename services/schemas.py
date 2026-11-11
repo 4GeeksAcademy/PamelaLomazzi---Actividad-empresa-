@@ -2,9 +2,44 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlmodel import SQLModel
+
+
+AuditRole = Literal["admin", "supervisor", "employee"]
+AuditAction = Literal["read", "modify", "export"]
+
+
+class AuditActor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    role: AuditRole
+    department_id: str = Field(
+        min_length=2, max_length=64, pattern=r"^[a-z0-9][a-z0-9-]*$"
+    )
+
+
+class AuditEventCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    patient_ref: UUID
+    action: AuditAction
+
+
+class AuditEventRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    actor_id: UUID
+    actor_role: AuditRole
+    department_id: str
+    patient_ref: UUID
+    action: AuditAction
+    occurred_at: datetime
+    anomaly_detected: bool
 
 
 class RootResponse(BaseModel):

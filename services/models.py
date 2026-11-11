@@ -1,10 +1,35 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint
+from sqlalchemy import CheckConstraint, Index
 from sqlmodel import Field, SQLModel
+
+
+class AuditEvent(SQLModel, table=True):
+    __tablename__ = "audit_event"
+    __table_args__ = (
+        CheckConstraint(
+            "actor_role IN ('admin', 'supervisor', 'employee')",
+            name="ck_audit_event_actor_role",
+        ),
+        CheckConstraint(
+            "action IN ('read', 'modify', 'export')",
+            name="ck_audit_event_action",
+        ),
+        Index("ix_audit_event_actor_time", "actor_id", "occurred_at"),
+        Index("ix_audit_event_department_time", "department_id", "occurred_at"),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    actor_id: UUID = Field(index=True)
+    actor_role: str
+    department_id: str = Field(index=True, min_length=2, max_length=64)
+    patient_ref: UUID = Field(index=True)
+    action: str
+    occurred_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    anomaly_detected: bool = False
 
 
 class Candidate(SQLModel, table=True):
