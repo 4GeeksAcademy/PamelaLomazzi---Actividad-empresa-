@@ -1,9 +1,32 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from sqlalchemy import CheckConstraint
 from sqlmodel import Field, SQLModel
+
+
+class Candidate(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    full_name: str
+    email: str
+    phone: str
+    position: str
+    linkedin_url: str | None = None
+    cv_url: str | None = None
+    experience_years: int = 0
+    status: str = "received"
+    stage: str = "pending"
+    applied_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class CandidateNote(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    record_id: str = Field(foreign_key="candidate.id", index=True)
+    content: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class MedicalSupply(SQLModel, table=True):

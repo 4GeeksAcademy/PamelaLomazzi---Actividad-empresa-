@@ -16,6 +16,45 @@ class HealthResponse(BaseModel):
     status: Literal["ok"]
 
 
+class CandidateCreate(BaseModel):
+    full_name: str = Field(min_length=1)
+    email: str = Field(min_length=1)
+    phone: str = Field(min_length=1)
+    position: str = Field(min_length=1)
+    linkedin_url: HttpUrl | None = None
+    cv_url: HttpUrl | None = None
+    experience_years: int = Field(ge=0)
+
+
+class CandidatePatch(BaseModel):
+    status: Literal["received", "in_progress", "selected", "discarded"] | None = None
+    stage: Literal[
+        "pending", "review", "personal_interview", "technical_interview", "offer_presented"
+    ] | None = None
+
+
+class NoteCreate(BaseModel):
+    content: str = Field(min_length=1, pattern=r"\S")
+
+
+class NoteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    record_id: str
+    content: str
+    created_at: datetime
+
+
+class NotesMeta(BaseModel):
+    total: int = Field(ge=0)
+
+
+class NotesResponse(BaseModel):
+    data: list[NoteResponse]
+    meta: NotesMeta
+
+
 class CandidateResponse(BaseModel):
     id: str
     full_name: str

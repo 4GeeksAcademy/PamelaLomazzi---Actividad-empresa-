@@ -3,12 +3,16 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from time import perf_counter
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import RequestResponseEndpoint
+from sqlmodel import Session
 
 from services.api.api_v1 import api_router
-from services.database import init_db
+from services.database import engine, init_db
+from services.routers.candidates import router as candidates_router, seed_candidates
 from services.routers.inventory import router as inventory_router
 from services.schemas import HealthResponse, RecordsResponse, RootResponse
 
@@ -27,6 +31,8 @@ def _get_cors_origin_regex() -> str:
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
+    with Session(engine) as session:
+        seed_candidates(session, _demo_records().data)
     yield
 
 
@@ -38,9 +44,25 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Process-Time-Ms"],
 )
+
+
+if os.getenv("API_TIMING_ENABLED", "true").strip().lower() in {"1", "true", "yes"}:
+    @app.middleware("http")
+    async def add_timing_header(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        started_at = perf_counter()
+        response = await call_next(request)
+        response.headers["X-Process-Time-Ms"] = f"{(perf_counter() - started_at) * 1000:.3f}"
+        return response
+
+
 app.include_router(api_router)
 app.include_router(inventory_router)
+app.include_router(candidates_router, prefix="/candidates")
+app.include_router(candidates_router, prefix="/records")
 
 
 @app.get("/", tags=["health"], response_model=RootResponse)
@@ -53,8 +75,7 @@ def health_check() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
-@app.get("/records", tags=["candidates"], response_model=RecordsResponse)
-def get_records() -> RecordsResponse:
+def _demo_records() -> RecordsResponse:
     records = [
         {
             "id": "candidate-demo-001",

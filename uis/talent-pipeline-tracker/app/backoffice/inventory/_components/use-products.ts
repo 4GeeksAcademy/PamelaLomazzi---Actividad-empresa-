@@ -10,7 +10,7 @@ export function useProducts() {
 
   useEffect(() => {
     let active = true;
-    inventoryApi.products().then(
+    inventoryApi.products(undefined, revision > 0).then(
       (data) => { if (active) { setProducts(data); setError(""); } },
       (reason: unknown) => { if (active) setError(inventoryErrorMessage(reason)); },
     );
