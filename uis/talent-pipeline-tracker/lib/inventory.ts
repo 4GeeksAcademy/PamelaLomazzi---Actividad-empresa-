@@ -117,9 +117,13 @@ async function request<ResponseBody>(
 }
 
 export const inventoryApi = {
-  products: (token?: string | null) => request<InventoryProduct[]>("/products", {}, token),
+  products: (token?: string | null, refresh = false) => request<InventoryProduct[]>("/products", {
+    headers: refresh ? { "X-Inventory-Refresh": "true" } : undefined,
+  }, token),
   product: (id: number, token?: string | null) => request<InventoryProduct>(`/products/${id}`, {}, token),
-  orders: (token?: string | null) => request<InventoryOrder[]>("/orders", {}, token),
+  orders: (token?: string | null, refresh = false) => request<InventoryOrder[]>("/orders", {
+    headers: refresh ? { "X-Inventory-Refresh": "true" } : undefined,
+  }, token),
   inbound: (payload: InboundPayload, token?: string | null) =>
     request<OrderResponse & InboundPayload>("/deliveries", { method: "POST", body: JSON.stringify(payload) }, token),
   outbound: (payload: OutboundPayload, token?: string | null) =>

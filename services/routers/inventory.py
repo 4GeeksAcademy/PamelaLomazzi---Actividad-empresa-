@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from hashlib import sha256
+from hmac import new as hmac_new
+from json import dumps
+from secrets import token_bytes
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from services.cache import TTLCache
 from services.database import get_db
 from services.models import MedicalSupply, SupplyConsumption, SupplyDelivery
 from services.schemas import (
@@ -20,6 +25,29 @@ from services.schemas import (
 )
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
+_products_cache = TTLCache[list[MedicalSupplyResponse]]()
+_orders_cache = TTLCache[list[InboundOrderResponse | OutboundOrderResponse]]()
+_scope_secret = token_bytes(32)
+
+
+def _cache_scope(request: Request) -> str | None:
+    authorization = request.headers.get("authorization", "").strip()
+    if not authorization:
+        return None
+    credentials = [
+        authorization,
+        request.headers.get("cookie", ""),
+    ]
+    return hmac_new(_scope_secret, dumps(credentials).encode(), sha256).hexdigest()
+
+
+def _bypass_cache(request: Request) -> bool:
+    return request.headers.get("x-inventory-refresh", "").lower() == "true"
+
+
+def _invalidate_inventory_cache() -> None:
+    _products_cache.clear()
+    _orders_cache.clear()
 
 
 def _stock_totals(session: Session) -> tuple[dict[int, int], dict[int, int]]:
@@ -73,13 +101,23 @@ def _current_stock(session: Session, supply_id: int) -> int:
 
 
 @router.get("/products", response_model=list[MedicalSupplyResponse])
-def list_products(session: Session = Depends(get_db)) -> Sequence[MedicalSupplyResponse]:
-    deliveries, consumptions = _stock_totals(session)
-    supplies = session.exec(select(MedicalSupply).order_by(MedicalSupply.name)).all()
-    return [
-        _supply_response(supply, deliveries, consumptions)
-        for supply in supplies
-    ]
+def list_products(
+    request: Request, response: Response, session: Session = Depends(get_db)
+) -> Sequence[MedicalSupplyResponse]:
+    response.headers["Cache-Control"] = "no-store"
+
+    def load_products() -> list[MedicalSupplyResponse]:
+        deliveries, consumptions = _stock_totals(session)
+        supplies = session.exec(select(MedicalSupply).order_by(MedicalSupply.name)).all()
+        return [
+            _supply_response(supply, deliveries, consumptions)
+            for supply in supplies
+        ]
+
+    if _bypass_cache(request):
+        return load_products()
+    key = (session.get_bind(), _cache_scope(request))
+    return _products_cache.get_or_load(key, 15, load_products)
 
 
 @router.post(
@@ -94,6 +132,7 @@ def create_product(
     supply = MedicalSupply.model_validate(payload)
     session.add(supply)
     session.commit()
+    _invalidate_inventory_cache()
     session.refresh(supply)
     return _supply_response(supply, {}, {})
 
@@ -121,6 +160,7 @@ def register_delivery(
     delivery = SupplyDelivery.model_validate(payload)
     session.add(delivery)
     session.commit()
+    _invalidate_inventory_cache()
     session.refresh(delivery)
     return delivery
 
@@ -144,25 +184,34 @@ def register_consumption(
     consumption = SupplyConsumption.model_validate(payload)
     session.add(consumption)
     session.commit()
+    _invalidate_inventory_cache()
     session.refresh(consumption)
     return consumption
 
 
 @router.get("/orders", response_model=list[InboundOrderResponse | OutboundOrderResponse])
 def list_orders(
-    session: Session = Depends(get_db),
+    request: Request, response: Response, session: Session = Depends(get_db),
 ) -> Sequence[InboundOrderResponse | OutboundOrderResponse]:
-    deliveries = session.exec(
-        select(SupplyDelivery, MedicalSupply.name).join(MedicalSupply)
-    ).all()
-    consumptions = session.exec(
-        select(SupplyConsumption, MedicalSupply.name).join(MedicalSupply)
-    ).all()
-    orders = [
-        InboundOrderResponse(**delivery.model_dump(), product_name=name)
-        for delivery, name in deliveries
-    ] + [
-        OutboundOrderResponse(**consumption.model_dump(), product_name=name)
-        for consumption, name in consumptions
-    ]
-    return sorted(orders, key=lambda order: order.created_at, reverse=True)
+    response.headers["Cache-Control"] = "no-store"
+
+    def load_orders() -> list[InboundOrderResponse | OutboundOrderResponse]:
+        deliveries = session.exec(
+            select(SupplyDelivery, MedicalSupply.name).join(MedicalSupply)
+        ).all()
+        consumptions = session.exec(
+            select(SupplyConsumption, MedicalSupply.name).join(MedicalSupply)
+        ).all()
+        orders = [
+            InboundOrderResponse(**delivery.model_dump(), product_name=name)
+            for delivery, name in deliveries
+        ] + [
+            OutboundOrderResponse(**consumption.model_dump(), product_name=name)
+            for consumption, name in consumptions
+        ]
+        return sorted(orders, key=lambda order: order.created_at, reverse=True)
+
+    scope = _cache_scope(request)
+    if scope is None or _bypass_cache(request):
+        return load_orders()
+    return _orders_cache.get_or_load((session.get_bind(), scope), 30, load_orders)

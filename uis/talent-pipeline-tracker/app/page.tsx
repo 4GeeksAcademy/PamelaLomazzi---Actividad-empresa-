@@ -3,10 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { getRecords } from "@/services/api";
-import type { CandidateStage, CandidateStatus, Record } from "@/types/candidate";
+import type { CandidateStage, CandidateStatus, Record as CandidateRecord } from "@/types/candidate";
 
 const STATUS_OPTIONS: Array<{ value: CandidateStatus; label: string }> = [
   { value: "received", label: "Recibida" },
@@ -47,11 +47,23 @@ function getStageLabel(stage: CandidateStage): string {
 }
 
 export default function Home() {
+  return (
+    <Suspense fallback={
+      <div role="status" className="min-h-screen bg-slate-100 px-6 py-8 text-slate-700">
+        Cargando candidaturas...
+      </div>
+    }>
+      <CandidatePipeline />
+    </Suspense>
+  );
+}
+
+function CandidatePipeline() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [records, setRecords] = useState<Record[]>([]);
+  const [records, setRecords] = useState<CandidateRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -79,20 +91,29 @@ export default function Home() {
     void fetchRecords();
   }, []);
 
+  const searchableRecords = useMemo(
+    () => records.map((record) => ({
+      record,
+      normalizedName: record.full_name.toLowerCase(),
+      normalizedEmail: record.email.toLowerCase(),
+    })),
+    [records],
+  );
+
   const filteredRecords = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
 
-    return records.filter((record) => {
+    return searchableRecords.filter(({ record, normalizedName, normalizedEmail }) => {
       const byStatus = selectedStatus === "all" || record.status === selectedStatus;
       const byStage = selectedStage === "all" || record.stage === selectedStage;
       const bySearch =
         !searchValue ||
-        record.full_name.toLowerCase().includes(searchValue) ||
-        record.email.toLowerCase().includes(searchValue);
+        normalizedName.includes(searchValue) ||
+        normalizedEmail.includes(searchValue);
 
       return byStatus && byStage && bySearch;
-    });
-  }, [records, selectedStage, selectedStatus, search]);
+    }).map(({ record }) => record);
+  }, [searchableRecords, selectedStage, selectedStatus, search]);
 
   function updateUrlFilter(key: "status" | "stage", value: string) {
     const params = new URLSearchParams(searchParams.toString());

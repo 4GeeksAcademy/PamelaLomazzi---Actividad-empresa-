@@ -75,7 +75,21 @@ async def analyze_incidents(file: UploadFile = File(...)) -> IncidentMetricsResp
 
 @router.get(
     "/results/export",
-    responses={400: {"model": ErrorResponse}},
+    response_model=None,
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "description": "CSV de métricas agregadas con columnas metric y value.",
+            "content": {"text/csv": {"schema": {"type": "string"}}},
+            "headers": {
+                "Content-Disposition": {
+                    "description": "Descarga del archivo results.csv.",
+                    "schema": {"type": "string"},
+                }
+            },
+        },
+        400: {"model": ErrorResponse},
+    },
 )
 def export_last_results() -> StreamingResponse:
     if _last_result is None:

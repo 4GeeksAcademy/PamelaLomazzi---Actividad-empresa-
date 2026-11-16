@@ -10,7 +10,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     let active = true;
-    inventoryApi.orders().then(
+    inventoryApi.orders(undefined, revision > 0).then(
       (data) => { if (active) { setOrders(data); setError(""); } },
       (reason: unknown) => { if (active) setError(inventoryErrorMessage(reason)); },
     );
